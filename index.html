@@ -20,7 +20,7 @@
         /* --- BASE STYLES --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
-            background-color: #f8fafc; /* Slate-50 for cleaner white look */
+            background-color: #f8fafc; /* Slate-50 */
             color: #1e293b; /* Slate-800 */
             -webkit-tap-highlight-color: transparent;
             padding-bottom: env(safe-area-inset-bottom);
@@ -41,9 +41,9 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* --- PRINT OPTIMIZATION (A4 Full Spec - UNTOUCHED) --- */
+        /* --- PRINT OPTIMIZATION (A4 Full Spec) --- */
         @media print {
-            @page { size: A4 portrait; margin: 15mm; }
+            @page { size: A4 landscape; margin: 10mm; } /* 横向き指定で幅いっぱい活用 */
             
             /* 1. FORCE RESET ROOT & BODY */
             html, body {
@@ -85,27 +85,24 @@
 
             /* 4. REPORT TYPOGRAPHY */
             .print-view h1 { 
-                font-size: 20pt; font-weight: bold; text-align: center; 
-                border-bottom: 2px solid black; margin-bottom: 8mm; padding-bottom: 2mm; 
+                font-size: 18pt; font-weight: bold; text-align: center; 
+                border-bottom: 2px solid black; margin-bottom: 5mm; padding-bottom: 2mm; 
             }
             .print-view h2 { 
-                font-size: 14pt; font-weight: bold; margin-top: 8mm; margin-bottom: 3mm; 
-                border-left: 5px solid #333; padding-left: 3mm; background-color: #f5f5f5;
-            }
-            .print-view h3 {
-                font-size: 11pt; font-weight: bold; margin-top: 5mm; margin-bottom: 2mm;
+                font-size: 12pt; font-weight: bold; margin-top: 5mm; margin-bottom: 2mm; 
+                border-left: 4px solid #333; padding-left: 2mm; background-color: #f0f0f0;
             }
             
             /* 5. TABLE STYLING */
             .print-view table { 
-                width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 10pt; table-layout: fixed;
+                width: 100%; border-collapse: collapse; margin-bottom: 3mm; font-size: 9pt; table-layout: fixed;
             }
             .print-view th { 
                 background-color: #e0e0e0 !important; color: black !important; font-weight: bold; 
-                border: 1px solid black; padding: 5px; text-align: center; -webkit-print-color-adjust: exact; 
+                border: 1px solid black; padding: 4px; text-align: center; -webkit-print-color-adjust: exact; 
             }
             .print-view td { 
-                border: 1px solid black; padding: 4px; vertical-align: middle; word-wrap: break-word;
+                border: 1px solid black; padding: 3px; vertical-align: middle; word-wrap: break-word;
             }
             .print-view .num { 
                 font-family: 'Courier New', monospace; text-align: right; 
@@ -115,43 +112,13 @@
             /* 6. UTILITIES */
             .page-break { page-break-before: always; }
             .disclaimer { 
-                font-size: 8pt; color: #444; border: 1px solid #ccc; padding: 8px; margin-top: 15px; 
+                font-size: 7pt; color: #444; border: 1px solid #ccc; padding: 5px; margin-top: 10px; 
             }
         }
 
         /* Default: Hide Print View on Screen */
         .print-view { display: none; }
     </style>
-
-    <!-- PWA Manifest -->
-    <script>
-        const manifest = {
-            "name": "BetTrack Pro",
-            "short_name": "BetTrack",
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#047857",
-            "theme_color": "#047857",
-            "icons": [{
-                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23047857'/%3E%3Cpath d='M360 160c-15 0-28 8-36 20-15-18-38-30-64-30-45 0-82 36-84 82-25 4-44 26-44 52 0 24 16 44 38 50v6h-32v32h160v-32h-32v-6c28-7 48-32 48-62 0-30-22-54-50-60 2-10 4-20 4-30 0-26-21-48-48-48z' fill='white'/%3E%3C/svg%3E",
-                "sizes": "512x512",
-                "type": "image/svg+xml"
-            }]
-        };
-        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = URL.createObjectURL(blob);
-        document.head.appendChild(link);
-    </script>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react/": "https://esm.sh/react@^19.2.3/"
-  }
-}
-</script>
 </head>
 <body>
     <div id="root"></div>
@@ -170,7 +137,7 @@
             },
             OVERSEAS: {
                 label: '海外・その他',
-                tracks: ['ロンシャン', 'シャティン', 'メイダン', 'アスコット', 'サンタアニタ', 'デルマー', 'チャーチル', 'エプソム', '他海外']
+                tracks: ['ロンシャン', 'シャティン', 'メイダン', 'アスコット', 'サンタアニタ', 'デルマー', '他海外']
             }
         };
 
@@ -227,7 +194,6 @@
 
         const Icon = ({ name, className = "" }) => <i className={`fas fa-${name} ${className}`}></i>;
 
-        // Visual Refresh: Tile
         const Tile = ({ label, sub, active, onClick, className = "", colorClass = "" }) => (
             <button onClick={onClick} className={`tile-btn relative p-1.5 rounded-xl border-2 font-bold text-sm flex flex-col items-center justify-center min-h-[52px] w-full leading-snug shadow-sm ${active ? `border-emerald-700 bg-emerald-700 text-white ring-2 ring-emerald-200 ring-offset-1` : `border-slate-100 bg-white text-slate-600 hover:bg-slate-50 hover:border-emerald-100 ${className}`}`}>
                 <span className="z-10">{label}</span>
@@ -236,14 +202,12 @@
             </button>
         );
 
-        // Visual Refresh: SectionTitle
         const SectionTitle = ({ children }) => (
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-6 ml-1 flex items-center">
                 <span className="w-1.5 h-1.5 bg-emerald-500 mr-2 rounded-full"></span>{children}
             </h3>
         );
 
-        // Visual Refresh: NumPad
         const NumPad = ({ value, onChange, onNext, label, confirmLabel = "決定" }) => {
             const displayValue = parseInt(value || '0').toLocaleString();
             const handleNum = (n) => {
@@ -442,7 +406,7 @@
             const currentYear = new Date().getFullYear();
             const yearRecords = React.useMemo(() => records.filter(r => new Date(r.date).getFullYear() === currentYear), [records]);
             
-            // Tax Logic (Unchanged)
+            // Tax Logic
             const totalRevenue = yearRecords.reduce((sum, r) => sum + (parseInt(r.payout) || 0), 0);
             const winningRecords = yearRecords.filter(r => (parseInt(r.payout) || 0) > 0);
             const deductibleCost = winningRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
@@ -460,13 +424,13 @@
             const reconstructionTax = Math.floor(incomeTax * 0.021);
             const estimatedTaxTotal = incomeTax + reconstructionTax;
 
-            // Chart Logic
+            // Chart Refs
             const chartLocRef = React.useRef(null);
             const chartGradeRef = React.useRef(null);
-            const chartCatRef = React.useRef(null);
+            const chartPieRef = React.useRef(null);
 
             React.useEffect(() => {
-                if (!chartLocRef.current || !chartGradeRef.current || !chartCatRef.current) return;
+                if (!chartLocRef.current || !chartGradeRef.current || !chartPieRef.current) return;
                 
                 const aggregate = (keyFn) => {
                     const map = {};
@@ -478,15 +442,16 @@
                     return Object.entries(map).sort((a,b) => b[1] - a[1]);
                 };
 
-                const catData = aggregate(r => {
-                    if (r.courseCategory) return COURSE_DATA[r.courseCategory]?.label || r.courseCategory;
-                    if (COURSE_DATA.CENTRAL.tracks.includes(r.location)) return COURSE_DATA.CENTRAL.label;
-                    if (COURSE_DATA.LOCAL.tracks.includes(r.location)) return COURSE_DATA.LOCAL.label;
-                    return COURSE_DATA.OVERSEAS.label;
-                });
                 const locData = aggregate(r => r.location);
                 const gradeData = aggregate(r => { const g = GRADES.find(g => g.id === r.grade); return g ? g.label : (r.grade || '未設定'); });
 
+                // PIE CHART DATA: Winning Counts by Track
+                const winsByTrack = {};
+                winningRecords.forEach(r => {
+                    winsByTrack[r.location] = (winsByTrack[r.location] || 0) + 1;
+                });
+                const sortedWins = Object.entries(winsByTrack).sort((a,b) => b[1] - a[1]).slice(0, 8); // Top 8
+                
                 const createConfig = (labels, data, label) => ({
                     type: 'bar',
                     data: {
@@ -505,9 +470,32 @@
                     }
                 });
 
-                const c1 = new Chart(chartLocRef.current, createConfig(locData.map(d=>d[0]), locData.map(d=>d[1]), '場所別'));
-                const c2 = new Chart(chartGradeRef.current, createConfig(gradeData.map(d=>d[0]), gradeData.map(d=>d[1]), 'グレード別'));
-                const c3 = new Chart(chartCatRef.current, createConfig(catData.map(d=>d[0]), catData.map(d=>d[1]), '主催別'));
+                const c1 = new Chart(chartLocRef.current, createConfig(locData.map(d=>d[0]), locData.map(d=>d[1]), '場所別収支'));
+                const c2 = new Chart(chartGradeRef.current, createConfig(gradeData.map(d=>d[0]), gradeData.map(d=>d[1]), 'グレード別収支'));
+
+                // Pie Chart Configuration
+                const pieColors = [
+                    '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#059669', '#047857', '#064e3b'
+                ];
+                const c3 = new Chart(chartPieRef.current, {
+                    type: 'pie',
+                    data: {
+                        labels: sortedWins.map(d => d[0]),
+                        datasets: [{
+                            data: sortedWins.map(d => d[1]),
+                            backgroundColor: pieColors,
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                        }
+                    }
+                });
 
                 return () => { c1.destroy(); c2.destroy(); c3.destroy(); };
             }, [yearRecords]);
@@ -541,7 +529,6 @@
                             </div>
                         </div>
 
-                        {/* Visual Refresh: Deep Green Tax Card */}
                         <div className="bg-emerald-900 rounded-2xl p-5 text-white shadow-lg shadow-emerald-900/20 relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="file-invoice-dollar" className="text-6xl" /></div>
                             <div className="relative z-10">
@@ -560,16 +547,19 @@
 
                     <div className="space-y-6">
                         <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-                            <h3 className="font-bold text-slate-700 mb-4 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>場所別収支</h3>
+                            <h3 className="font-bold text-slate-700 mb-4 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>場所別収支 (金額)</h3>
                             <div className="chart-container"><canvas ref={chartLocRef}></canvas></div>
                         </div>
+                        
+                        {/* New Pie Chart Component */}
+                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                            <h3 className="font-bold text-slate-700 mb-4 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>的中数・相性 (場所別)</h3>
+                            <div className="chart-container"><canvas ref={chartPieRef}></canvas></div>
+                        </div>
+
                         <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
                             <h3 className="font-bold text-slate-700 mb-4 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>グレード別収支</h3>
                             <div className="chart-container"><canvas ref={chartGradeRef}></canvas></div>
-                        </div>
-                         <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-                            <h3 className="font-bold text-slate-700 mb-4 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>主催別収支</h3>
-                            <div className="chart-container"><canvas ref={chartCatRef}></canvas></div>
                         </div>
                     </div>
 
@@ -577,7 +567,7 @@
                         <button onClick={() => window.print()} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-800/20 flex items-center justify-center gap-2 hover:bg-slate-700 transition-colors">
                             <Icon name="print" /> 帳票印刷 (PDF保存)
                         </button>
-                        <p className="text-[10px] text-center text-slate-400 mt-2 font-medium">※ブラウザの印刷機能を使用します（A4対応）</p>
+                        <p className="text-[10px] text-center text-slate-400 mt-2 font-medium">※ブラウザの印刷機能を使用します（A4横対応）</p>
                     </div>
                 </div>
             );
@@ -591,28 +581,33 @@
                     {sorted.length === 0 ? <div className="text-center py-20 text-slate-400 font-medium">記録がありません</div> : 
                         <div className="space-y-4">{sorted.map(r => {
                             const profit = (parseInt(r.payout)||0) - (parseInt(r.investment)||0);
-                            const isWin = profit > 0;
+                            const isWin = (parseInt(r.payout)||0) > 0; // Payout exists
+                            const isPlus = profit > 0; // Actual profit
+                            
                             return (
-                                <div key={r.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
-                                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isWin ? 'bg-emerald-500' : 'bg-slate-200'}`}></div>
+                                <div key={r.id} className={`rounded-2xl p-5 shadow-sm border relative overflow-hidden transition-all ${isPlus ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-100'}`}>
+                                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isPlus ? 'bg-emerald-500' : 'bg-slate-200'}`}></div>
                                     <div className="pl-3">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
-                                                <div className="text-[10px] font-bold text-slate-400 mb-0.5">{r.date.replace(/-/g, '/')}</div>
-                                                <div className="font-bold text-lg text-slate-800">{r.location} <span className="text-sm font-normal text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md ml-1">{r.raceNumber}R</span></div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-bold text-slate-400">{r.date.replace(/-/g, '/')}</span>
+                                                    {isPlus && <span className="bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">的中</span>}
+                                                </div>
+                                                <div className="font-bold text-lg text-slate-800">{r.location} <span className="text-sm font-normal text-slate-500 bg-white/50 px-1.5 py-0.5 rounded-md ml-1 border border-slate-100">{r.raceNumber}R</span></div>
                                             </div>
                                             <div className="text-right">
-                                                <div className={`font-black text-xl ${isWin ? 'text-emerald-600' : 'text-slate-800'}`}>
-                                                    {isWin ? '+' : ''}{profit.toLocaleString()}
+                                                <div className={`font-black text-xl ${isPlus ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                                    {isPlus ? '+' : ''}{profit.toLocaleString()}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 mb-3 text-[10px] font-bold">
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">{GRADES.find(g=>g.id===r.grade)?.label}</span>
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">{r.ticketType}</span>
+                                            <span className="px-2 py-1 bg-white text-slate-600 rounded-md border border-slate-200">{GRADES.find(g=>g.id===r.grade)?.label}</span>
+                                            <span className="px-2 py-1 bg-white text-slate-600 rounded-md border border-slate-200">{r.ticketType}</span>
                                             {r.horseNumber && <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md border border-indigo-100">#{r.horseNumber}</span>}
                                         </div>
-                                        <button onClick={() => onDelete(r.id)} className="w-full py-2 text-rose-500 text-xs font-bold border border-rose-100 rounded-xl hover:bg-rose-50 transition-colors">削除</button>
+                                        <button onClick={() => onDelete(r.id)} className="w-full py-2 text-rose-500 text-xs font-bold border border-rose-100 rounded-xl hover:bg-rose-50 transition-colors bg-white">削除</button>
                                     </div>
                                 </div>
                             );
@@ -655,7 +650,6 @@
             const currentYear = new Date().getFullYear();
             const yearRecords = records.filter(r => new Date(r.date).getFullYear() === currentYear);
             
-            // Calc logic mirrored from AnalysisView
             const totalRevenue = yearRecords.reduce((sum, r) => sum + (parseInt(r.payout) || 0), 0);
             const winningRecords = yearRecords.filter(r => (parseInt(r.payout) || 0) > 0);
             const deductibleCost = winningRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
@@ -671,12 +665,10 @@
             const reconstructionTax = Math.floor(incomeTax * 0.021);
             const estimatedTaxTotal = incomeTax + reconstructionTax;
 
-            // Sort by Date for Report
             const sortedRecords = [...winningRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
 
             return (
                 <div className="print-view">
-                    {/* PAGE 1: Summary */}
                     <h1>{currentYear}年 競馬収支・一時所得計算書</h1>
                     <div className="disclaimer">
                         <strong>【重要】</strong> 本書類はアプリ内の記録に基づく計算結果です。確定申告の際は、必ず源泉徴収票や支払調書と照合し、所轄税務署の指導に従ってください。
@@ -706,8 +698,7 @@
 
                     <div className="page-break"></div>
 
-                    {/* PAGE 2: Details */}
-                    <h1>{currentYear}年 的中履歴明細書</h1>
+                    <h2>3. 的中履歴明細書 (抜粋)</h2>
                     <table>
                         <thead>
                             <tr>
@@ -755,7 +746,6 @@
             }, []);
 
             const saveRecord = (data) => {
-                // Parse integers safely
                 const inv = parseInt(data.investment) || 0;
                 const pay = parseInt(data.payout) || 0;
                 const newRecord = { id: Date.now().toString(), ...data, investment: inv, payout: pay, timestamp: Date.now() };
@@ -791,7 +781,7 @@
 
             return (
                 <React.Fragment>
-                    {/* Mobile App View (Visible on Screen) */}
+                    {/* Mobile App View */}
                     <div className="app-view min-h-screen max-w-md mx-auto bg-slate-50 shadow-2xl overflow-hidden relative border-x border-slate-200">
                         <main className="h-full overflow-y-auto hide-scrollbar">
                             {view === 'INPUT' && <InputView onSave={saveRecord} recordCount={records.length} />}
@@ -808,7 +798,7 @@
                         </nav>
                     </div>
 
-                    {/* Print View (Hidden on Screen, Visible on Print) */}
+                    {/* Print View */}
                     <PrintView records={records} />
                 </React.Fragment>
             );
