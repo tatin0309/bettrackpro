@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BetTrack Pro</title>
+    <meta name="description" content="競馬収支管理・確定申告支援ツール">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest"
+        href="data:application/json;base64,eyJuYW1lIjoiQmV0VHJhY2sgUHJvIiwic2hvcnRfbmFtZSI6IkJldFRyYWNrIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2Y4ZmFmYyIsInRoZW1lX2NvbG9yIjoiIzEwYjk4MSJ9">
+
+    <!-- Libraries (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* --- BASE STYLES --- */
+        :root {
+            --app-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #059669;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+            background-color: var(--app-bg);
+            color: #1e293b;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom);
+            overscroll-behavior-y: none;
+            /* Pull-to-refresh無効化 */
+        }
+
+        /* Mobile Optimization */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Interactive Elements */
+        .btn-press {
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-press:active {
+            transform: scale(0.96);
+        }
+
+        .tile-btn {
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            touch-action: manipulation;
+        }
+
+        .tile-btn:active {
+            transform: scale(0.96);
+        }
+
+        .input-focus-ring:focus-within {
+            ring: 2px solid #10b981;
+            border-color: #10b981;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+        }
+
+        /* Animations */
+        .animate-slide-up {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Monthly Card Scroll */
+        .snap-x {
+            scroll-snap-type: x mandatory;
+        }
+
+        .snap-center {
+            scroll-snap-align: center;
+        }
+
+        /* --- PRINT OPTIMIZATION (A4 Full Spec) --- */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            html,
+            body {
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+            }
+
+            #root {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            /* Hide UI */
+            .app-view,
+            .no-print,
+            nav,
+            .chart-wrapper,
+            .input-area,
+            .tile-btn,
+            .chart-container,
+            .toast-notification {
+                display: none !important;
+            }
+
+            /* Show Print View */
+            .print-view {
+                display: block !important;
+                visibility: visible !important;
+                width: 100% !important;
+                font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+            }
+
+            /* Typography */
+            .print-view h1 {
+                font-size: 18pt;
+                font-weight: bold;
+                text-align: center;
+                border-bottom: 2px solid black;
+                margin-bottom: 5mm;
+                padding-bottom: 2mm;
+            }
+
+            .print-view h2 {
+                font-size: 12pt;
+                font-weight: bold;
+                margin-top: 5mm;
+                margin-bottom: 2mm;
+                border-left: 4px solid #333;
+                padding-left: 2mm;
+                background-color: #f0f0f0;
+            }
+
+            /* Table */
+            .print-view table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 3mm;
+                font-size: 9pt;
+                table-layout: fixed;
+            }
+
+            .print-view th {
+                background-color: #e0e0e0 !important;
+                border: 1px solid black;
+                padding: 4px;
+                text-align: center;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .print-view td {
+                border: 1px solid black;
+                padding: 3px;
+                vertical-align: middle;
+            }
+
+            .print-view .num {
+                font-family: 'Courier New', monospace;
+                text-align: right;
+            }
+
+            .print-view .center {
+                text-align: center;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .disclaimer {
+                font-size: 7pt;
+                color: #444;
+                border: 1px solid #ccc;
+                padding: 5px;
+                margin-top: 10px;
+            }
+        }
+
+        .print-view {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- CONSTANTS & DATA ---
+        const COURSE_DATA = {
+            CENTRAL: {
+                label: '中央競馬 (JRA)',
+                tracks: ['東京', '中山', '京都', '阪神', '新潟', '福島', '中京', '小倉', '札幌', '函館']
+            },
+            LOCAL: {
+                label: '地方競馬 (NAR)',
+                tracks: ['大井', '船橋', '川崎', '浦和', '園田', '姫路', '高知', '名古屋', '笠松', '佐賀', '門別', '盛岡', '水沢', '金沢']
+            },
+            OVERSEAS: {
+                label: '海外・その他',
+                tracks: ['ロンシャン', 'シャティン', 'メイダン', 'アスコット', 'サンタアニタ', 'デルマー', '他海外']
+            }
+        };
+
+        const SURFACES = [
+            { id: 'TURF', label: '芝', color: 'bg-green-50 text-green-700 border-green-200' },
+            { id: 'DIRT', label: 'ダート', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+            { id: 'OBSTACLE', label: '障害', color: 'bg-blue-50 text-blue-800 border-blue-200' }
+        ];
+
+        const DISTANCES = [
+            { id: 'SPRINT', label: '短距離', sub: '〜1300m' },
+            { id: 'MILE', label: 'マイル', sub: '1400〜1800m' },
+            { id: 'INTERMEDIATE', label: '中距離', sub: '1900〜2300m' },
+            { id: 'LONG', label: '長距離', sub: '2400m〜' }
+        ];
+
+        const CONDITIONS = ['良', '稍重', '重', '不良'];
+
+        const GRADES = [
+            { id: 'G1', label: 'G1', color: 'bg-yellow-50 text-yellow-700 border-yellow-200 ring-yellow-100' },
+            { id: 'G2', label: 'G2', color: 'bg-rose-50 text-rose-700 border-rose-200 ring-rose-100' },
+            { id: 'G3', label: 'G3', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-100' },
+            { id: 'OP_L', label: 'OP/L', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+            { id: '3C', label: '3勝C', color: 'bg-white text-slate-600 border-slate-100' },
+            { id: '2C', label: '2勝C', color: 'bg-white text-slate-600 border-slate-100' },
+            { id: '1C', label: '1勝C', color: 'bg-white text-slate-600 border-slate-100' },
+            { id: 'MAIDEN', label: '未勝利', color: 'bg-slate-50 text-slate-500 border-slate-100' },
+            { id: 'NEW', label: '新馬', color: 'bg-sky-50 text-sky-700 border-sky-100' }
+        ];
+
+        const TICKET_TYPES = [
+            { id: 'TAN', label: '単勝' },
+            { id: 'FUKU', label: '複勝' },
+            { id: 'WAKU', label: '枠連' },
+            { id: 'UMA', label: '馬連' },
+            { id: 'UTAN', label: '馬単' },
+            { id: 'WIDE', label: 'ワイド' },
+            { id: 'SANFUKU', label: '3連複' },
+            { id: 'SANTAN', label: '3連単' },
+            { id: 'WIN5', label: 'WIN5' }
+        ];
+
+        const TAG_OPTIONS = [
+            { id: 'CONFIDENCE', label: '自信あり', icon: 'fire' },
+            { id: 'VALUE', label: '穴狙い', icon: 'bolt' },
+            { id: 'PADDOCK', label: 'パドック重視', icon: 'eye' },
+            { id: 'DATA', label: 'データ重視', icon: 'chart-bar' }
+        ];
+
+        const TAX_BRACKETS = [
+            { min: 0, max: 1949000, rate: 0.05, deduction: 0 },
+            { min: 1950000, max: 3299000, rate: 0.10, deduction: 97500 },
+            { min: 3300000, max: 6949000, rate: 0.20, deduction: 427500 },
+            { min: 6950000, max: 8999000, rate: 0.23, deduction: 636000 },
+            { min: 9000000, max: 17999000, rate: 0.33, deduction: 1536000 },
+            { min: 18000000, max: 39999000, rate: 0.40, deduction: 2796000 },
+            { min: 40000000, max: Infinity, rate: 0.45, deduction: 4796000 }
+        ];
+
+        // --- COMPONENTS ---
+
+        const Icon = ({ name, className = "" }) => <i className={`fas fa-${name} ${className}`}></i>;
+
+        const Toast = ({ message, show }) => (
+            <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-300 ease-out pointer-events-none toast-notification ${show ? 'translate-y-0 opacity-100' : '-translate-y-8 opacity-0'}`}>
+                <div className="bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3">
+                    <div className="bg-emerald-500 rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                        <Icon name="check" />
+                    </div>
+                    <span className="font-bold text-sm tracking-wide">{message}</span>
+                </div>
+            </div>
+        );
+
+        const Tile = ({ label, sub, active, onClick, className = "", colorClass = "" }) => (
+            <button onClick={onClick} className={`tile-btn relative p-2 rounded-2xl border font-bold text-sm flex flex-col items-center justify-center min-h-[56px] w-full leading-snug shadow-sm overflow-hidden ${active ? `border-emerald-600 bg-emerald-600 text-white shadow-emerald-200 ring-2 ring-emerald-100 ring-offset-1` : `border-slate-100 bg-white text-slate-600 hover:bg-slate-50 hover:border-emerald-200 ${className}`}`}>
+                <span className="z-10 relative">{label}</span>
+                {sub && <span className={`text-[9px] font-medium mt-0.5 z-10 relative ${active ? 'text-emerald-100' : 'text-slate-400'}`}>{sub}</span>}
+                {active && <div className="absolute -top-4 -right-4 w-10 h-10 bg-white/20 rounded-full blur-sm" />}
+            </button>
+        );
+
+        const SectionTitle = ({ children }) => (
+            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-7 ml-1 flex items-center">
+                <span className="w-1 h-3 bg-emerald-500 mr-2 rounded-full"></span>{children}
+            </h3>
+        );
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 ${className}`}>
+                {children}
+            </div>
+        );
+
+        const NumPad = ({ value, onChange, onNext, label, confirmLabel = "決定" }) => {
+            const displayValue = parseInt(value || '0').toLocaleString();
+            const handleNum = (n) => {
+                const current = value.toString();
+                if (current === '0') onChange(n);
+                else if (current.length < 9) onChange(current + n);
+            };
+            const handleBack = () => {
+                const current = value.toString();
+                if (current.length <= 1) onChange('0');
+                else onChange(current.slice(0, -1));
+            };
+            const addAmount = (amount) => {
+                const current = parseInt(value || '0');
+                onChange((current + amount).toString());
+            };
+
+            return (
+                <Card className="p-6">
+                    <div className="flex justify-between items-end mb-6 px-1">
+                        <span className="text-slate-500 font-bold text-xs tracking-wider">{label}</span>
+                        <div className="text-4xl font-black text-slate-800 border-b-4 border-emerald-500/10 pb-1 min-w-[140px] text-right tracking-tighter">
+                            {displayValue === 'NaN' ? '0' : displayValue}<span className="text-sm font-bold text-slate-400 ml-2">円</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-2.5 mb-5">
+                        {[100, 1000, 10000].map(amt => (
+                            <button key={amt} onClick={() => addAmount(amt)} className="btn-press flex-1 py-3 bg-slate-50 text-emerald-700 border border-slate-100 text-xs font-bold rounded-xl hover:bg-emerald-50 hover:border-emerald-100 transition-colors">
+                                +{amt.toLocaleString()}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        {[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => (
+                            <button key={n} onClick={() => handleNum(n.toString())} className="btn-press h-16 bg-white border border-slate-100 rounded-2xl font-bold text-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">{n}</button>
+                        ))}
+                        <button onClick={() => onChange('0')} className="btn-press h-16 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs shadow-sm">クリア</button>
+                        <button onClick={() => handleNum('0')} className="btn-press h-16 bg-white border border-slate-100 rounded-2xl font-bold text-2xl text-slate-700 shadow-sm">0</button>
+                        <button onClick={handleBack} className="btn-press h-16 bg-slate-100 text-slate-500 rounded-2xl shadow-sm flex items-center justify-center"><Icon name="backspace" /></button>
+                    </div>
+                    {onNext && (
+                        <button onClick={onNext} className="btn-press w-full mt-6 h-14 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
+                            {confirmLabel} <Icon name="check-circle" />
+                        </button>
+                    )}
+                </Card>
+            );
+        };
+
+        // --- GLOBAL MEMORY ---
+        let globalInputMemory = {
+            date: new Date().toISOString().split('T')[0],
+            courseCategory: 'CENTRAL',
+            location: '',
+            raceNumber: 11,
+            surface: 'TURF',
+            distance: 'MILE',
+            condition: '良',
+            grade: 'COND',
+            ticketType: '3連単',
+            horseNumber: null,
+            investment: '',
+            payout: '',
+            memo: '',
+            tags: []
+        };
+
+        // --- VIEWS ---
+
+        const InputView = ({ onSave, recordCount }) => {
+            const [step, setStep] = React.useState(0);
+            const [data, setData] = React.useState(globalInputMemory);
+
+            const update = (key, val) => {
+                const newData = { ...data, [key]: val };
+                setData(newData);
+                if (key !== 'investment' && key !== 'payout') {
+                    globalInputMemory = { ...globalInputMemory, [key]: val };
+                }
+            };
+
+            const StepIndicator = () => (
+                <div className="flex gap-2 mb-8 justify-center items-center">
+                    {[0, 1, 2, 3, 4].map(s => (
+                        <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ease-out ${step >= s ? 'w-8 bg-emerald-500' : 'w-3 bg-slate-200'}`} />
+                    ))}
+                </div>
+            );
+
+            return (
+                <div className="pb-32 bg-slate-50 min-h-screen input-area">
+                    <div className="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-5 py-4 shadow-sm border-b border-slate-100 flex items-center justify-between">
+                        <h2 className="font-bold text-slate-800 text-lg tracking-tight">
+                            <span className="text-emerald-600 mr-2 font-black">STEP {step + 1}</span>
+                            <span className="text-sm font-medium text-slate-400">
+                                {step === 0 && '開催情報'} {step === 1 && 'レース詳細'} {step === 2 && '馬番選択'} {step === 3 && 'メモ・タグ'} {step === 4 && '収支入力'}
+                            </span>
+                        </h2>
+                        {step > 0 && <button onClick={() => setStep(step - 1)} className="btn-press text-xs font-bold text-slate-500 bg-slate-100 px-4 py-2 rounded-full hover:bg-slate-200">戻る</button>}
+                    </div>
+
+                    {recordCount >= 50 && recordCount % 50 === 0 && (
+                        <div className="bg-amber-50 px-5 py-3 border-b border-amber-100 flex items-center justify-between animate-fade-in">
+                            <div className="text-xs text-amber-700 font-bold flex items-center">
+                                <Icon name="exclamation-triangle" className="mr-2" />記録が{recordCount}件を超えました
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="p-5 max-w-lg mx-auto animate-slide-up">
+                        <StepIndicator />
+
+                        {step === 0 && (
+                            <>
+                                <SectionTitle>日付</SectionTitle>
+                                <div className="relative">
+                                    <input type="date" value={data.date} onChange={e => update('date', e.target.value)} className="w-full p-4 bg-white rounded-2xl border border-slate-200 font-bold text-lg mb-6 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-slate-700 transition-all appearance-none" />
+                                    <div className="absolute right-4 top-4 pointer-events-none text-slate-400"><Icon name="calendar-alt" /></div>
+                                </div>
+
+                                <SectionTitle>主催カテゴリ</SectionTitle>
+                                <div className="flex p-1.5 bg-slate-200 rounded-2xl mb-6">
+                                    {Object.keys(COURSE_DATA).map(cat => (
+                                        <button key={cat} onClick={() => update('courseCategory', cat)} className={`flex-1 py-3 rounded-xl font-bold text-xs transition-all duration-300 ${data.courseCategory === cat ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-600'}`}>{COURSE_DATA[cat].label.split('(')[0]}</button>
+                                    ))}
+                                </div>
+                                <SectionTitle>競馬場</SectionTitle>
+                                <div className="grid grid-cols-4 gap-2.5 mb-8">
+                                    {COURSE_DATA[data.courseCategory].tracks.map(track => <Tile key={track} label={track} active={data.location === track} onClick={() => update('location', track)} />)}
+                                </div>
+                                <button onClick={() => setStep(1)} disabled={!data.location} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none transition-all flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
+                            </>
+                        )}
+
+                        {step === 1 && (
+                            <>
+                                <SectionTitle>レース番号</SectionTitle>
+                                <div className="grid grid-cols-6 gap-2 mb-5">
+                                    {[...Array(12)].map((_, i) => <Tile key={i} label={`${i + 1}R`} active={data.raceNumber === i + 1} onClick={() => update('raceNumber', i + 1)} />)}
+                                </div>
+                                <SectionTitle>クラス / グレード</SectionTitle>
+                                <div className="grid grid-cols-3 gap-2.5 mb-5">
+                                    {GRADES.map(g => <Tile key={g.id} label={g.label} active={data.grade === g.id} onClick={() => update('grade', g.id)} colorClass={g.color} />)}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-5">
+                                    <div><SectionTitle>馬場</SectionTitle><div className="grid grid-cols-1 gap-2">{SURFACES.map(s => <Tile key={s.id} label={s.label} active={data.surface === s.id} onClick={() => update('surface', s.id)} colorClass={s.color} />)}</div></div>
+                                    <div><SectionTitle>距離</SectionTitle><div className="grid grid-cols-1 gap-2">{DISTANCES.map(d => <Tile key={d.id} label={d.label} sub={d.sub} active={data.distance === d.id} onClick={() => update('distance', d.id)} />)}</div></div>
+                                </div>
+                                <SectionTitle>馬場状態</SectionTitle>
+                                <div className="grid grid-cols-4 gap-2.5 mb-6">
+                                    {CONDITIONS.map(c => <Tile key={c} label={c} active={data.condition === c} onClick={() => update('condition', c)} />)}
+                                </div>
+                                <SectionTitle>券種</SectionTitle>
+                                <div className="grid grid-cols-3 gap-2.5 mb-8">
+                                    {TICKET_TYPES.map(t => <Tile key={t.id} label={t.label} active={data.ticketType === t.label} onClick={() => update('ticketType', t.label)} />)}
+                                </div>
+                                <button onClick={() => setStep(2)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
+                            </>
+                        )}
+
+                        {step === 2 && (
+                            <>
+                                <SectionTitle>軸馬 / 注目馬 (任意)</SectionTitle>
+                                <Card className="p-6 mb-8">
+                                    <div className="grid grid-cols-6 gap-3">
+                                        {[...Array(18)].map((_, i) => (
+                                            <button key={i} onClick={() => update('horseNumber', data.horseNumber === i + 1 ? null : i + 1)} className={`btn-press aspect-square rounded-xl font-black text-lg border-2 transition-all ${data.horseNumber === i + 1 ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg transform scale-105' : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'}`}>{i + 1}</button>
+                                        ))}
+                                    </div>
+                                    <div className="mt-8 text-center">
+                                        <button onClick={() => update('horseNumber', null)} className="btn-press text-xs text-rose-500 font-bold px-6 py-2.5 border border-rose-100 rounded-full hover:bg-rose-50 transition-colors">選択をクリア</button>
+                                    </div>
+                                </Card>
+                                <button onClick={() => setStep(3)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
+                            </>
+                        )}
+
+                        {step === 3 && (
+                            <>
+                                <SectionTitle>タグを選択</SectionTitle>
+                                <div className="grid grid-cols-2 gap-3 mb-8">
+                                    {TAG_OPTIONS.map(tag => (
+                                        <button
+                                            key={tag.id}
+                                            onClick={() => {
+                                                const newTags = data.tags.includes(tag.id) ? data.tags.filter(t => t !== tag.id) : [...data.tags, tag.id];
+                                                update('tags', newTags);
+                                            }}
+                                            className={`btn-press p-4 rounded-2xl border flex items-center gap-3 font-bold text-xs transition-all ${data.tags.includes(tag.id) ? 'bg-emerald-600 border-emerald-600 text-white ring-2 ring-emerald-100' : 'bg-white border-slate-100 text-slate-600'}`}
+                                        >
+                                            <Icon name={tag.icon} /> {tag.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <SectionTitle>メモ</SectionTitle>
+                                <textarea
+                                    className="w-full p-4 bg-white rounded-2xl border border-slate-200 font-medium text-sm mb-8 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-slate-700 min-h-[120px] resize-none"
+                                    placeholder="レースの感想や買い目の理由など..."
+                                    value={data.memo}
+                                    onChange={e => update('memo', e.target.value)}
+                                />
+                                <button onClick={() => setStep(4)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">収支入力へ <Icon name="coins" /></button>
+                            </>
+                        )}
+
+                        {step === 4 && (
+                            <div className="space-y-6">
+                                <NumPad label="購入金額 (投資)" value={data.investment} onChange={v => update('investment', v)} />
+                                <NumPad label="払戻金額 (回収)" value={data.payout} onChange={v => update('payout', v)} confirmLabel="記録を保存" onNext={() => {
+                                    onSave(data);
+                                    const nextRaceNum = data.raceNumber < 12 ? data.raceNumber + 1 : 1;
+                                    const nextState = {
+                                        ...data,
+                                        raceNumber: nextRaceNum,
+                                        investment: '',
+                                        payout: '',
+                                        horseNumber: null,
+                                        memo: '',
+                                        tags: []
+                                    };
+                                    globalInputMemory = nextState;
+                                    setData(nextState);
+                                    setStep(0);
+                                }} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const AnalysisView = ({ records }) => {
+            const currentYear = new Date().getFullYear();
+            const yearRecords = React.useMemo(() => records.filter(r => new Date(r.date).getFullYear() === currentYear), [records]);
+
+            // Stats
+            const totalRevenue = yearRecords.reduce((sum, r) => sum + (parseInt(r.payout) || 0), 0);
+            const winningRecords = yearRecords.filter(r => (parseInt(r.payout) || 0) > 0);
+            const deductibleCost = winningRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
+            const totalInvestmentAll = yearRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
+
+            // Tax Calc
+            const temporaryIncome = Math.max(0, totalRevenue - deductibleCost - 500000);
+            const taxableIncome = Math.floor(temporaryIncome * 0.5);
+            let incomeTax = 0;
+            if (taxableIncome > 0) {
+                const bracket = TAX_BRACKETS.find(b => taxableIncome >= b.min && taxableIncome <= b.max);
+                if (bracket) incomeTax = (taxableIncome * bracket.rate) - bracket.deduction;
+            }
+            incomeTax = Math.max(0, Math.floor(incomeTax));
+            const reconstructionTax = Math.floor(incomeTax * 0.021);
+            const estimatedTaxTotal = incomeTax + reconstructionTax;
+
+            // Track Stats Logic
+            const trackStats = React.useMemo(() => {
+                const stats = {};
+                yearRecords.forEach(r => {
+                    if (!stats[r.location]) stats[r.location] = { inv: 0, pay: 0, wins: 0, count: 0 };
+                    const i = parseInt(r.investment) || 0;
+                    const p = parseInt(r.payout) || 0;
+                    stats[r.location].inv += i;
+                    stats[r.location].pay += p;
+                    stats[r.location].count += 1;
+                    if (p > 0) stats[r.location].wins += 1;
+                });
+                return Object.entries(stats).map(([k, v]) => ({
+                    name: k, ...v,
+                    recovery: v.inv > 0 ? (v.pay / v.inv) * 100 : 0
+                }));
+            }, [yearRecords]);
+
+            const bestTrack = trackStats.filter(t => t.inv > 0).sort((a, b) => b.recovery - a.recovery)[0];
+            const worstTrack = trackStats.filter(t => t.inv > 0).sort((a, b) => a.recovery - b.recovery)[0];
+
+            const chartLocRef = React.useRef(null);
+            const chartGradeRef = React.useRef(null);
+            const chartPieRef = React.useRef(null);
+            const chartAssetRef = React.useRef(null);
+            const chartRefs = React.useRef([]);
+
+            // Monthly Data Calculation
+            const monthlyStats = React.useMemo(() => {
+                const months = {};
+                yearRecords.forEach(r => {
+                    const m = r.date.substring(0, 7); // YYYY-MM
+                    if (!months[m]) months[m] = { inv: 0, pay: 0, count: 0 };
+                    months[m].inv += (parseInt(r.investment) || 0);
+                    months[m].pay += (parseInt(r.payout) || 0);
+                    months[m].count += 1;
+                });
+                return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])); // Newest first
+            }, [yearRecords]);
+
+            React.useEffect(() => {
+                chartRefs.current.forEach(c => c.destroy());
+                chartRefs.current = [];
+
+                if (!chartLocRef.current || !chartGradeRef.current || !chartPieRef.current || !chartAssetRef.current) return;
+
+                // Helper
+                const aggregateBalance = (keyFn) => {
+                    const map = {};
+                    yearRecords.forEach(r => {
+                        const k = keyFn(r);
+                        if (!map[k]) map[k] = 0;
+                        map[k] += ((parseInt(r.payout) || 0) - (parseInt(r.investment) || 0));
+                    });
+                    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+                };
+
+                const locData = aggregateBalance(r => r.location);
+                const gradeData = aggregateBalance(r => { const g = GRADES.find(g => g.id === r.grade); return g ? g.label : (r.grade || '未設定'); });
+
+                // Donut Chart: Win Distribution
+                const winDistribution = trackStats.filter(t => t.wins > 0).sort((a, b) => b.wins - a.wins).slice(0, 8);
+
+                const createConfig = (labels, data, label) => ({
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label, data,
+                            backgroundColor: data.map(v => v >= 0 ? '#10b981' : '#f43f5e'),
+                            borderRadius: 4, barThickness: 16
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                    }
+                });
+
+                // Asset Curve Data
+                const sortedByDate = [...yearRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let cumulative = 0;
+                const assetLabels = [];
+                const assetData = [];
+                sortedByDate.forEach(r => {
+                    cumulative += ((parseInt(r.payout) || 0) - (parseInt(r.investment) || 0));
+                    assetLabels.push(r.date.substring(5)); // MM-DD
+                    assetData.push(cumulative);
+                });
+
+                chartRefs.current.push(new Chart(chartAssetRef.current, {
+                    type: 'line',
+                    data: {
+                        labels: assetLabels,
+                        datasets: [{
+                            label: '累計収支',
+                            data: assetData,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0 } } }
+                    }
+                }));
+
+                chartRefs.current.push(new Chart(chartLocRef.current, createConfig(locData.map(d => d[0]), locData.map(d => d[1]), '場所別収支')));
+                chartRefs.current.push(new Chart(chartGradeRef.current, createConfig(gradeData.map(d => d[0]), gradeData.map(d => d[1]), 'グレード別収支')));
+
+                // Donut Config
+                chartRefs.current.push(new Chart(chartPieRef.current, {
+                    type: 'doughnut',
+                    data: {
+                        labels: winDistribution.map(d => d.name),
+                        datasets: [{
+                            data: winDistribution.map(d => d.wins),
+                            backgroundColor: ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#ecfdf5', '#f0fdf4'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true } } }
+                    }
+                }));
+
+            }, [yearRecords, trackStats]);
+
+            return (
+                <div className="pb-32 p-5 bg-slate-50 min-h-screen">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Icon name="chart-pie" className="mr-3 text-emerald-600" />収支分析</h2>
+
+                    <Card className="p-6 mb-6 overflow-hidden relative">
+                        <div className="flex justify-between items-baseline mb-8">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-1">Total Report {currentYear}</p>
+                                <h1 className="text-3xl font-black text-slate-800">収支統計</h1>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs font-bold text-slate-400">回収率</span>
+                                <div className="text-3xl font-black tracking-tighter text-slate-800">
+                                    {totalInvestmentAll > 0 ? Math.round((totalRevenue / totalInvestmentAll) * 100) : 0}<span className="text-sm ml-0.5">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">総払戻 (Revenue)</p>
+                                <p className="text-xl font-black text-slate-700">{totalRevenue.toLocaleString()}</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">総投資 (Investment)</p>
+                                <p className="text-xl font-black text-slate-700">{totalInvestmentAll.toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className={`rounded-2xl p-5 text-white shadow-xl relative overflow-hidden ${totalRevenue - totalInvestmentAll >= 0 ? 'bg-emerald-600 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
+                            <div className="absolute -top-4 -right-4 text-white opacity-20"><Icon name="coins" className="text-8xl" /></div>
+                            <div className="relative z-10 flex justify-between items-end">
+                                <div>
+                                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Net Profit</p>
+                                    <h2 className="text-3xl font-black tracking-tight">{(totalRevenue - totalInvestmentAll).toLocaleString()} <span className="text-sm font-normal">円</span></h2>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Tax Est.</p>
+                                    <p className="text-lg font-bold">{estimatedTaxTotal.toLocaleString()} 円</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* NEW: Monthly Summary Scroll */}
+                    <SectionTitle>月別サマリー</SectionTitle>
+                    <div className="flex gap-4 overflow-x-auto pb-6 hide-scrollbar snap-x -mx-5 px-5">
+                        {monthlyStats.length === 0 ? <div className="text-slate-400 text-xs font-bold p-4">データがありません</div> : monthlyStats.map(([m, s]) => (
+                            <div key={m} className="min-w-[160px] snap-center">
+                                <Card className="p-4 border-l-4 border-l-emerald-500">
+                                    <div className="text-[10px] font-black text-slate-400 mb-1">{m.replace('-', '/')}</div>
+                                    <div className={`text-lg font-black ${s.pay - s.inv >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                        {s.pay - s.inv > 0 ? '+' : ''}{(s.pay - s.inv).toLocaleString()}
+                                    </div>
+                                    <div className="text-[9px] font-bold text-slate-400 mt-1">回収率: {s.inv > 0 ? Math.round((s.pay / s.inv) * 100) : 0}%</div>
+                                </Card>
+                            </div>
+                        ))}
+                    </div>
+
+                    <Card className="p-6 mb-8">
+                        <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>累計収支推移 (資産曲線)</h3>
+                        <div className="chart-container"><canvas ref={chartAssetRef}></canvas></div>
+                    </Card>
+
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                        <Card className="p-4">
+                            <div className="flex items-center gap-2 mb-2 text-emerald-600">
+                                <Icon name="crown" /> <span className="text-[10px] font-bold uppercase">Best Track</span>
+                            </div>
+                            {bestTrack ? (
+                                <div>
+                                    <div className="text-lg font-black text-slate-800">{bestTrack.name}</div>
+                                    <div className="text-xs font-medium text-slate-500">回収率: <span className="text-emerald-600 font-bold">{Math.round(bestTrack.recovery)}%</span></div>
+                                </div>
+                            ) : <div className="text-xs text-slate-400">データなし</div>}
+                        </Card>
+                        <Card className="p-4">
+                            <div className="flex items-center gap-2 mb-2 text-rose-500">
+                                <Icon name="thumbs-down" /> <span className="text-[10px] font-bold uppercase">Worst Track</span>
+                            </div>
+                            {worstTrack ? (
+                                <div>
+                                    <div className="text-lg font-black text-slate-800">{worstTrack.name}</div>
+                                    <div className="text-xs font-medium text-slate-500">回収率: <span className="text-rose-500 font-bold">{Math.round(worstTrack.recovery)}%</span></div>
+                                </div>
+                            ) : <div className="text-xs text-slate-400">データなし</div>}
+                        </Card>
+                    </div>
+
+                    <div className="space-y-6">
+                        <Card className="p-6">
+                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>場所別収支</h3>
+                            <div className="chart-container"><canvas ref={chartLocRef}></canvas></div>
+                        </Card>
+
+                        <Card className="p-6">
+                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>的中数割合 (場所別)</h3>
+                            <div className="chart-container"><canvas ref={chartPieRef}></canvas></div>
+                        </Card>
+
+                        <Card className="p-6">
+                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>グレード別収支</h3>
+                            <div className="chart-container"><canvas ref={chartGradeRef}></canvas></div>
+                        </Card>
+                    </div>
+
+                    <div className="mt-10 mb-6">
+                        <button onClick={() => window.print()} className="btn-press w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-800/20 flex items-center justify-center gap-3 hover:bg-slate-700 transition-colors">
+                            <Icon name="print" /> 帳票印刷 (PDF保存)
+                        </button>
+                        <p className="text-[10px] text-center text-slate-400 mt-3 font-medium">※ブラウザの印刷機能を使用します（A4横対応）</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const ListView = ({ records, onDelete }) => {
+            const [filter, setFilter] = React.useState({ track: '', type: '', text: '' });
+            const [showFilter, setShowFilter] = React.useState(false);
+
+            const filtered = React.useMemo(() => {
+                return records.filter(r => {
+                    const matchTrack = !filter.track || r.location === filter.track;
+                    const matchType = !filter.type || r.ticketType === filter.type;
+                    const matchSearch = !filter.text ||
+                        r.location.includes(filter.text) ||
+                        (r.memo && r.memo.includes(filter.text));
+                    return matchTrack && matchType && matchSearch;
+                }).sort((a, b) => b.timestamp - a.timestamp);
+            }, [records, filter]);
+
+            const tracks = Array.from(new Set(records.map(r => r.location)));
+
+            return (
+                <div className="pb-32 p-5 bg-slate-50 min-h-screen">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-slate-800 flex items-center"><Icon name="list" className="mr-3 text-emerald-600" />履歴一覧</h2>
+                        <button onClick={() => setShowFilter(!showFilter)} className={`p-2 rounded-xl border transition-all ${showFilter ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+                            <Icon name="filter" />
+                        </button>
+                    </div>
+
+                    {showFilter && (
+                        <Card className="p-4 mb-6 space-y-3 animate-fade-in">
+                            <div className="flex gap-2">
+                                <select value={filter.track} onChange={e => setFilter({ ...filter, track: e.target.value })} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none">
+                                    <option value="">全ての場所</option>
+                                    {tracks.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <select value={filter.type} onChange={e => setFilter({ ...filter, type: e.target.value })} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none">
+                                    <option value="">全ての券種</option>
+                                    {TICKET_TYPES.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="メモや場所で検索..."
+                                    value={filter.text}
+                                    onChange={e => setFilter({ ...filter, text: e.target.value })}
+                                    className="w-full p-2.5 pl-9 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-emerald-500"
+                                />
+                                <Icon name="search" className="absolute left-3 top-3 text-slate-400" />
+                            </div>
+                        </Card>
+                    )}
+
+                    {filtered.length === 0 ? <div className="text-center py-32 text-slate-400 font-bold text-sm">記録が見つかりません</div> :
+                        <div className="space-y-4">{filtered.map(r => {
+                            const profit = (parseInt(r.payout) || 0) - (parseInt(r.investment) || 0);
+                            const isWin = (parseInt(r.payout) || 0) > 0;
+
+                            const cardStyle = isWin
+                                ? 'bg-emerald-50/40 border-emerald-200 border-l-4 border-l-emerald-500'
+                                : 'bg-white border-slate-100 border-l-4 border-l-slate-200';
+
+                            return (
+                                <div key={r.id} className={`rounded-2xl p-5 shadow-sm border relative overflow-hidden transition-all ${cardStyle}`}>
+                                    {isWin && (
+                                        <div className="absolute top-0 right-0 bg-emerald-100 text-emerald-600 px-3 py-1 rounded-bl-xl text-[10px] font-black tracking-wider flex items-center gap-1">
+                                            <Icon name="crown" /> WIN
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="text-[10px] font-bold text-slate-400 tracking-wider">
+                                                    {r.date.replace(/-/g, '.')}
+                                                    {r.tags && r.tags.length > 0 && <span className="ml-2 text-emerald-500"><Icon name="tag" /></span>}
+                                                </span>
+                                            </div>
+                                            <div className="font-black text-lg text-slate-800 flex items-baseline gap-2">
+                                                {r.location} <span className="text-sm font-bold text-slate-500 bg-slate-100/50 px-2 py-0.5 rounded-md">{r.raceNumber}R</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right mt-4">
+                                            <div className={`font-black text-xl tracking-tight ${profit > 0 ? 'text-emerald-600' : profit < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                                                {profit > 0 ? '+' : ''}{profit.toLocaleString()}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 mb-3 text-[9px] font-bold">
+                                        <span className="px-2 py-0.5 bg-white text-slate-500 rounded border border-slate-200">{GRADES.find(g => g.id === r.grade)?.label}</span>
+                                        <span className="px-2 py-0.5 bg-white text-slate-500 rounded border border-slate-200">{r.ticketType}</span>
+                                        {r.horseNumber && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100">#{r.horseNumber}</span>}
+                                        {r.tags && r.tags.map(tid => {
+                                            const tag = TAG_OPTIONS.find(t => t.id === tid);
+                                            return tag ? <span key={tid} className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded border border-amber-100"><Icon name={tag.icon} className="mr-1" />{tag.label}</span> : null;
+                                        })}
+                                    </div>
+
+                                    {r.memo && (
+                                        <div className="mb-4 p-3 bg-slate-50/80 rounded-xl text-[11px] text-slate-600 font-medium leading-relaxed border border-slate-100">
+                                            {r.memo}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between border-t border-slate-100/50 pt-3 mt-2">
+                                        <div className="text-[10px] text-slate-400 font-medium">
+                                            投: {parseInt(r.investment).toLocaleString()} / 回: {parseInt(r.payout).toLocaleString()}
+                                        </div>
+                                        <button onClick={() => onDelete(r.id)} className="text-rose-400 text-xs font-bold hover:text-rose-600 px-2 py-1 transition-colors"><Icon name="trash-alt" /> 削除</button>
+                                    </div>
+                                </div>
+                            );
+                        })}</div>
+                    }
+                </div>
+            );
+        };
+
+        const SettingsView = ({ records, onImport }) => {
+            const exportData = () => {
+                const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `bettrack_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                link.click();
+            };
+            return (
+                <div className="pb-32 p-5 bg-slate-50 min-h-screen">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Icon name="cog" className="mr-3 text-emerald-600" />設定</h2>
+                    <div className="space-y-4">
+                        <Card className="p-6">
+                            <div className="flex items-center mb-5"><div className="p-3 bg-emerald-50 text-emerald-600 rounded-full mr-4"><Icon name="download" /></div><div><h3 className="font-bold text-slate-700">バックアップ作成</h3><p className="text-[10px] text-slate-400">全データをJSONファイルとして保存します</p></div></div>
+                            <button onClick={exportData} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all">データをダウンロード</button>
+                        </Card>
+
+                        <Card className="p-6">
+                            <div className="flex items-center mb-5"><div className="p-3 bg-blue-50 text-blue-600 rounded-full mr-4"><Icon name="upload" /></div><div><h3 className="font-bold text-slate-700">データ復元</h3><p className="text-[10px] text-slate-400">バックアップファイルを読み込みます</p></div></div>
+                            <label className="btn-press block w-full py-4 bg-slate-50 text-slate-600 rounded-2xl font-bold text-center cursor-pointer border-2 border-dashed border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all">
+                                JSONファイルを選択<input type="file" onChange={onImport} accept=".json" className="hidden" />
+                            </label>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- PRINT VIEW COMPONENT (A4 Optimized) ---
+        const PrintView = ({ records }) => {
+            const currentYear = new Date().getFullYear();
+            const yearRecords = records.filter(r => new Date(r.date).getFullYear() === currentYear);
+
+            const totalRevenue = yearRecords.reduce((sum, r) => sum + (parseInt(r.payout) || 0), 0);
+            const winningRecords = yearRecords.filter(r => (parseInt(r.payout) || 0) > 0);
+            const deductibleCost = winningRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
+            const temporaryIncome = Math.max(0, totalRevenue - deductibleCost - 500000);
+            const taxableIncome = Math.floor(temporaryIncome * 0.5);
+
+            let incomeTax = 0;
+            if (taxableIncome > 0) {
+                const bracket = TAX_BRACKETS.find(b => taxableIncome >= b.min && taxableIncome <= b.max);
+                if (bracket) incomeTax = (taxableIncome * bracket.rate) - bracket.deduction;
+            }
+            incomeTax = Math.max(0, Math.floor(incomeTax));
+            const reconstructionTax = Math.floor(incomeTax * 0.021);
+            const estimatedTaxTotal = incomeTax + reconstructionTax;
+
+            const sortedRecords = [...winningRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            return (
+                <div className="print-view">
+                    <h1>{currentYear}年 競馬収支・一時所得計算書</h1>
+                    <div className="disclaimer">
+                        <strong>【重要】</strong> 本書類はアプリ内の記録に基づく計算結果です。確定申告の際は、必ず源泉徴収票や支払調書と照合し、所轄税務署の指導に従ってください。
+                    </div>
+
+                    <h2>1. 収支計算概要</h2>
+                    <table>
+                        <thead><tr><th style={{ width: '30%' }}>項目</th><th style={{ width: '40%' }}>計算式・内容</th><th style={{ width: '30%' }}>金額</th></tr></thead>
+                        <tbody>
+                            <tr><td>総払戻金額 (A)</td><td>的中投票券の払戻金合計</td><td className="num">{totalRevenue.toLocaleString()} 円</td></tr>
+                            <tr><td>必要経費 (B)</td><td>的中投票券の購入費用</td><td className="num">▲ {deductibleCost.toLocaleString()} 円</td></tr>
+                            <tr><td>特別控除額 (C)</td><td>一時所得の特別控除 (最大50万円)</td><td className="num">▲ 500,000 円</td></tr>
+                            <tr style={{ backgroundColor: '#eee' }}><td>一時所得 (D)</td><td>A - B - C (赤字は0)</td><td className="num font-bold">{temporaryIncome.toLocaleString()} 円</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>2. 納税額シミュレーション (目安)</h2>
+                    <table>
+                        <thead><tr><th style={{ width: '30%' }}>項目</th><th style={{ width: '40%' }}>計算式</th><th style={{ width: '30%' }}>金額</th></tr></thead>
+                        <tbody>
+                            <tr><td>課税対象額 (E)</td><td>一時所得 (D) × 1/2</td><td className="num">{taxableIncome.toLocaleString()} 円</td></tr>
+                            <tr><td>算出所得税 (F)</td><td>(E) × 税率 - 控除額</td><td className="num">{incomeTax.toLocaleString()} 円</td></tr>
+                            <tr><td>復興特別所得税 (G)</td><td>(F) × 2.1%</td><td className="num">{reconstructionTax.toLocaleString()} 円</td></tr>
+                            <tr style={{ backgroundColor: '#eee' }}><td>最終納税目安</td><td>(F) + (G)</td><td className="num font-bold">{estimatedTaxTotal.toLocaleString()} 円</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div className="page-break"></div>
+
+                    <h2>3. 的中履歴明細書 (抜粋)</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style={{ width: '12%' }}>日付</th>
+                                <th style={{ width: '12%' }}>場所</th>
+                                <th style={{ width: '6%' }}>R</th>
+                                <th style={{ width: '10%' }}>券種</th>
+                                <th style={{ width: '20%' }}>投資 (経費)</th>
+                                <th style={{ width: '20%' }}>払戻 (収入)</th>
+                                <th style={{ width: '20%' }}>差引収支</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedRecords.map((r, i) => (
+                                <tr key={i}>
+                                    <td className="center">{r.date}</td>
+                                    <td className="center">{r.location}</td>
+                                    <td className="center">{r.raceNumber}</td>
+                                    <td className="center">{r.ticketType}</td>
+                                    <td className="num">{parseInt(r.investment).toLocaleString()}</td>
+                                    <td className="num font-bold">{parseInt(r.payout).toLocaleString()}</td>
+                                    <td className="num">+{(parseInt(r.payout) - parseInt(r.investment)).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                            <tr style={{ backgroundColor: '#eee', fontWeight: 'bold', borderTop: '2px solid black' }}>
+                                <td colSpan="4" className="center">合計</td>
+                                <td className="num">{deductibleCost.toLocaleString()}</td>
+                                <td className="num">{totalRevenue.toLocaleString()}</td>
+                                <td className="num">+{(totalRevenue - deductibleCost).toLocaleString()}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [view, setView] = React.useState('INPUT');
+            const [records, setRecords] = React.useState([]);
+            const [toast, setToast] = React.useState({ show: false, message: '' });
+
+            React.useEffect(() => {
+                const saved = localStorage.getItem('bettrack_records_v1');
+                if (saved) { try { setRecords(JSON.parse(saved)); } catch (e) { } }
+            }, []);
+
+            const showToast = (msg) => {
+                setToast({ show: true, message: msg });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            const saveRecord = (data) => {
+                const inv = parseInt(data.investment) || 0;
+                const pay = parseInt(data.payout) || 0;
+
+                // --- ADDED: Confetti Celebration ---
+                if (pay > 0) {
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#10b981', '#059669', '#34d399', '#fcd34d']
+                    });
+                }
+
+                const newRecord = { id: Date.now().toString(), ...data, investment: inv, payout: pay, timestamp: Date.now() };
+                const updated = [newRecord, ...records];
+                setRecords(updated);
+                localStorage.setItem('bettrack_records_v1', JSON.stringify(updated));
+                showToast('記録を保存しました');
+            };
+
+            const deleteRecord = (id) => {
+                if (!confirm('削除しますか？')) return;
+                const updated = records.filter(r => r.id !== id);
+                setRecords(updated);
+                localStorage.setItem('bettrack_records_v1', JSON.stringify(updated));
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (Array.isArray(imported)) {
+                            setRecords(imported);
+                            localStorage.setItem('bettrack_records_v1', JSON.stringify(imported));
+                            showToast('データを復元しました');
+                        }
+                    } catch (err) { alert('エラー: ファイル形式が不正です'); }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <React.Fragment>
+                    <Toast message={toast.message} show={toast.show} />
+
+                    {/* Mobile App View */}
+                    <div className="app-view min-h-screen max-w-md mx-auto bg-slate-50 shadow-2xl overflow-hidden relative border-x border-slate-200">
+                        <main className="h-full overflow-y-auto hide-scrollbar">
+                            {view === 'INPUT' && <InputView onSave={saveRecord} recordCount={records.length} />}
+                            {view === 'LIST' && <ListView records={records} onDelete={deleteRecord} />}
+                            {view === 'ANALYSIS' && <AnalysisView records={records} />}
+                            {view === 'SETTINGS' && <SettingsView records={records} onImport={importData} />}
+                        </main>
+                        <nav className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pb-safe pt-2 h-[85px] z-50">
+                            {[{ id: 'INPUT', icon: 'plus-circle', label: '記録' }, { id: 'LIST', icon: 'list', label: '履歴' }, { id: 'ANALYSIS', icon: 'chart-pie', label: '分析' }, { id: 'SETTINGS', icon: 'cog', label: '設定' }].map(item => (
+                                <button key={item.id} onClick={() => setView(item.id)} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 ${view === item.id ? 'text-emerald-600 scale-105' : 'text-slate-300 hover:text-slate-400'}`}>
+                                    <Icon name={item.icon} className={`text-xl mb-0.5 ${view === item.id ? 'animate-pop' : ''}`} /><span className="text-[10px] font-bold tracking-wide">{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    {/* Print View */}
+                    <PrintView records={records} />
+                </React.Fragment>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
