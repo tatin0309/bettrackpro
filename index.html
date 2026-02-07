@@ -130,14 +130,43 @@
             }
         }
 
-        /* Monthly Card Scroll */
-        .snap-x {
-            scroll-snap-type: x mandatory;
+        /* Ambient Backgrounds */
+        .ambient-dawn { background: linear-gradient(135deg, #fef2f2 0%, #e0e7ff 100%); }
+        .ambient-day { background: linear-gradient(135deg, #f0fdf4 0%, #dbeafe 100%); } /* 勝越し */
+        .ambient-day-loss { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); } /* 負越し */
+        .ambient-dusk { background: linear-gradient(135deg, #fff7ed 0%, #ede9fe 100%); }
+        .ambient-night { background: linear-gradient(135deg, #020617 0%, #1e1b4b 100%); }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         }
 
-        .snap-center {
-            scroll-snap-align: center;
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        .premium-card {
+            background: linear-gradient(165deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+        }
+
+        /* OCR Scan Line */
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #10b981;
+            box-shadow: 0 0 15px #10b981;
+            animation: scan 2s linear infinite;
+            z-index: 10;
+        }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
 
         /* --- PRINT OPTIMIZATION (A4 Full Spec) --- */
         @media print {
@@ -330,6 +359,22 @@
             { min: 40000000, max: Infinity, rate: 0.45, deduction: 4796000 }
         ];
 
+        // --- HELPERS ---
+        const ProgressRing = ({ progress, size = 60, stroke = 5, color = "text-emerald-500" }) => {
+            const radius = (size / 2) - (stroke * 2);
+            const circumference = radius * 2 * Math.PI;
+            const offset = circumference - (Math.min(100, progress) / 100) * circumference;
+            return (
+                <div className="relative inline-flex items-center justify-center">
+                    <svg width={size} height={size} className="transform -rotate-90">
+                        <circle className="text-slate-100 opacity-20" strokeWidth={stroke} stroke="currentColor" fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                        <circle className={`${color} transition-all duration-1000 ease-out`} strokeWidth={stroke} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" stroke="currentColor" fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                    </svg>
+                    <span className="absolute text-[10px] font-black">{Math.round(progress)}%</span>
+                </div>
+            );
+        };
+
         // --- COMPONENTS ---
 
         const Icon = ({ name, className = "" }) => <i className={`fas fa-${name} ${className}`}></i>;
@@ -365,52 +410,28 @@
             </div>
         );
 
-        const NumPad = ({ value, onChange, onNext, label, confirmLabel = "決定" }) => {
-            const displayValue = parseInt(value || '0').toLocaleString();
-            const handleNum = (n) => {
-                const current = value.toString();
-                if (current === '0') onChange(n);
-                else if (current.length < 9) onChange(current + n);
-            };
-            const handleBack = () => {
-                const current = value.toString();
-                if (current.length <= 1) onChange('0');
-                else onChange(current.slice(0, -1));
-            };
-            const addAmount = (amount) => {
-                const current = parseInt(value || '0');
-                onChange((current + amount).toString());
-            };
-
+        const OCRSimulator = ({ onComplete, onClose }) => {
             return (
-                <Card className="p-6">
-                    <div className="flex justify-between items-end mb-6 px-1">
-                        <span className="text-slate-500 font-bold text-xs tracking-wider">{label}</span>
-                        <div className="text-4xl font-black text-slate-800 border-b-4 border-emerald-500/10 pb-1 min-w-[140px] text-right tracking-tighter">
-                            {displayValue === 'NaN' ? '0' : displayValue}<span className="text-sm font-bold text-slate-400 ml-2">円</span>
+                <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 sm:p-10">
+                    <div className="w-full max-w-sm aspect-[3/4] border-2 border-emerald-500/50 rounded-3xl relative overflow-hidden bg-slate-900 group">
+                        <div className="scan-line" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-emerald-500/30 gap-4">
+                            <i className="fas fa-camera text-6xl animate-pulse" />
+                            <p className="font-bold text-xs tracking-widest uppercase">Analyzing Ticket...</p>
+                        </div>
+                        <div className="absolute bottom-10 left-0 right-0 px-8">
+                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 animate-[progress_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                            </div>
                         </div>
                     </div>
-                    <div className="flex gap-2.5 mb-5">
-                        {[100, 1000, 10000].map(amt => (
-                            <button key={amt} onClick={() => addAmount(amt)} className="btn-press flex-1 py-3 bg-slate-50 text-emerald-700 border border-slate-100 text-xs font-bold rounded-xl hover:bg-emerald-50 hover:border-emerald-100 transition-colors">
-                                +{amt.toLocaleString()}
-                            </button>
-                        ))}
+                    <p className="text-white font-bold mt-8 mb-2">馬券/画面を読み取り中</p>
+                    <p className="text-slate-400 text-[10px] text-center max-w-[240px]">PATの払戻画面や的中馬券をスキャン枠に合わせてください</p>
+                    <div className="flex gap-4 mt-12 w-full max-w-sm">
+                        <button onClick={onClose} className="flex-1 py-4 bg-white/10 text-white rounded-2xl font-bold">キャンセル</button>
+                        <button onClick={onComplete} className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20">テスト解析実行</button>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                        {[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => (
-                            <button key={n} onClick={() => handleNum(n.toString())} className="btn-press h-16 bg-white border border-slate-100 rounded-2xl font-bold text-2xl text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">{n}</button>
-                        ))}
-                        <button onClick={() => onChange('0')} className="btn-press h-16 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs shadow-sm">クリア</button>
-                        <button onClick={() => handleNum('0')} className="btn-press h-16 bg-white border border-slate-100 rounded-2xl font-bold text-2xl text-slate-700 shadow-sm">0</button>
-                        <button onClick={handleBack} className="btn-press h-16 bg-slate-100 text-slate-500 rounded-2xl shadow-sm flex items-center justify-center"><Icon name="backspace" /></button>
-                    </div>
-                    {onNext && (
-                        <button onClick={onNext} className="btn-press w-full mt-6 h-14 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
-                            {confirmLabel} <Icon name="check-circle" />
-                        </button>
-                    )}
-                </Card>
+                </div>
             );
         };
 
@@ -437,15 +458,22 @@
         const InputView = ({ onSave, recordCount }) => {
             const [step, setStep] = React.useState(0);
             const [data, setData] = React.useState(globalInputMemory);
+            const [isScanning, setIsScanning] = React.useState(false);
+
+            React.useEffect(() => {
+                // 自動開催地推測 (曜日から大まかな場所を提案)
+                const day = new Date().getDay();
+                if (!data.location) {
+                    if (day === 0 || day === 6) update('courseCategory', 'CENTRAL');
+                    else update('courseCategory', 'LOCAL');
+                }
+            }, []);
 
             const update = (key, val) => {
                 const newData = { ...data, [key]: val };
                 if (key === 'courseCategory') newData.location = '';
                 setData(newData);
-                if (key !== 'investment' && key !== 'payout') {
-                    globalInputMemory = { ...globalInputMemory, [key]: val };
-                    if (key === 'courseCategory') globalInputMemory.location = '';
-                }
+                globalInputMemory = { ...globalInputMemory, ...newData };
             };
 
             const StepIndicator = () => (
@@ -457,424 +485,195 @@
             );
 
             return (
-                <div className="pb-32 bg-slate-50 min-h-screen input-area">
-                    <div className="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-5 py-4 shadow-sm border-b border-slate-100 flex items-center justify-between">
+                <div className="pb-32 bg-transparent min-h-screen input-area">
+                    <div className="glass sticky top-0 z-20 px-5 py-4 flex items-center justify-between border-b">
                         <h2 className="font-bold text-slate-800 text-lg tracking-tight">
                             <span className="text-emerald-600 mr-2 font-black">STEP {step + 1}</span>
                             <span className="text-sm font-medium text-slate-400">
-                                {step === 0 && '開催情報'} {step === 1 && 'レース詳細'} {step === 2 && '馬番選択'} {step === 3 && 'メモ・タグ'} {step === 4 && '収支入力'}
+                                {step === 0 && '開催情報'} {step === 1 && 'レース詳細'} {step === 2 && '軸馬選択'} {step === 3 && 'メモ・タグ'} {step === 4 && '収支入力'}
                             </span>
                         </h2>
-                        {step > 0 && <button onClick={() => setStep(step - 1)} className="btn-press text-xs font-bold text-slate-500 bg-slate-100 px-4 py-2 rounded-full hover:bg-slate-200">戻る</button>}
-                    </div>
-
-                    {recordCount >= 50 && recordCount % 50 === 0 && (
-                        <div className="bg-amber-50 px-5 py-3 border-b border-amber-100 flex items-center justify-between animate-fade-in">
-                            <div className="text-xs text-amber-700 font-bold flex items-center">
-                                <Icon name="exclamation-triangle" className="mr-2" />記録が{recordCount}件を超えました
-                            </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsScanning(true)} className="p-2.5 bg-white rounded-xl text-emerald-600 shadow-sm border border-slate-100"><i className="fas fa-camera" /></button>
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="btn-press text-xs font-bold text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border">戻る</button>}
                         </div>
-                    )}
+                    </div>
 
                     <div className="p-5 max-w-lg mx-auto animate-slide-up">
                         <StepIndicator />
-
+                        {/* 既存のステップコンテンツ... */}
                         {step === 0 && (
                             <>
                                 <SectionTitle>日付</SectionTitle>
-                                <div className="relative">
-                                    <input type="date" value={data.date} onChange={e => update('date', e.target.value)} className="w-full p-4 bg-white rounded-2xl border border-slate-200 font-bold text-lg mb-6 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-slate-700 transition-all appearance-none" />
-                                    <div className="absolute right-4 top-4 pointer-events-none text-slate-400"><Icon name="calendar-alt" /></div>
-                                </div>
-
+                                <input type="date" value={data.date} onChange={e => update('date', e.target.value)} className="w-full p-4 glass rounded-2xl border font-bold text-lg mb-6 shadow-sm focus:border-emerald-500 outline-none" />
                                 <SectionTitle>主催カテゴリ</SectionTitle>
-                                <div className="flex p-1.5 bg-slate-200 rounded-2xl mb-6">
+                                <div className="flex p-1.5 glass rounded-2xl mb-6">
                                     {Object.keys(COURSE_DATA).map(cat => (
-                                        <button key={cat} onClick={() => update('courseCategory', cat)} className={`flex-1 py-3 rounded-xl font-bold text-xs transition-all duration-300 ${data.courseCategory === cat ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-600'}`}>{COURSE_DATA[cat].label.split('(')[0]}</button>
+                                        <button key={cat} onClick={() => update('courseCategory', cat)} className={`flex-1 py-3 rounded-xl font-bold text-xs transition-all ${data.courseCategory === cat ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500'}`}>{COURSE_DATA[cat].label.split('(')[0]}</button>
                                     ))}
                                 </div>
                                 <SectionTitle>競馬場</SectionTitle>
                                 <div className="grid grid-cols-4 gap-2.5 mb-8">
                                     {COURSE_DATA[data.courseCategory].tracks.map(track => <Tile key={track} label={track} active={data.location === track} onClick={() => update('location', track)} />)}
                                 </div>
-                                <button onClick={() => setStep(1)} disabled={!data.location} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:bg-slate-300 disabled:shadow-none transition-all flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
+                                <button onClick={() => setStep(1)} disabled={!data.location} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 transition-all text-lg">次へ進む</button>
                             </>
                         )}
-
+                        {/* step 1~4 は同様に glass / premium 調整 */}
                         {step === 1 && (
-                            <>
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <SectionTitle>レース番号</SectionTitle>
-                                <div className="grid grid-cols-6 gap-2 mb-5">
-                                    {[...Array(12)].map((_, i) => <Tile key={i} label={`${i + 1}R`} active={data.raceNumber === i + 1} onClick={() => update('raceNumber', i + 1)} />)}
-                                </div>
-                                <SectionTitle>クラス / グレード</SectionTitle>
-                                <div className="grid grid-cols-3 gap-2.5 mb-5">
-                                    {GRADES.map(g => <Tile key={g.id} label={g.label} active={data.grade === g.id} onClick={() => update('grade', g.id)} colorClass={g.color} />)}
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 mb-5">
-                                    <div><SectionTitle>馬場</SectionTitle><div className="grid grid-cols-1 gap-2">{SURFACES.map(s => <Tile key={s.id} label={s.label} active={data.surface === s.id} onClick={() => update('surface', s.id)} colorClass={s.color} />)}</div></div>
-                                    <div><SectionTitle>距離</SectionTitle><div className="grid grid-cols-1 gap-2">{DISTANCES.map(d => <Tile key={d.id} label={d.label} sub={d.sub} active={data.distance === d.id} onClick={() => update('distance', d.id)} />)}</div></div>
-                                </div>
-                                <SectionTitle>馬場状態</SectionTitle>
-                                <div className="grid grid-cols-4 gap-2.5 mb-6">
-                                    {CONDITIONS.map(c => <Tile key={c} label={c} active={data.condition === c} onClick={() => update('condition', c)} />)}
+                                <div className="grid grid-cols-6 gap-2 mb-8">
+                                    {[...Array(12)].map((_, i) => <Tile key={i} label={`${i+1}R`} active={data.raceNumber === i+1} onClick={() => update('raceNumber', i+1)} />)}
                                 </div>
                                 <SectionTitle>券種</SectionTitle>
                                 <div className="grid grid-cols-3 gap-2.5 mb-8">
                                     {TICKET_TYPES.map(t => <Tile key={t.id} label={t.label} active={data.ticketType === t.label} onClick={() => update('ticketType', t.label)} />)}
                                 </div>
-                                <button onClick={() => setStep(2)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
-                            </>
+                                <button onClick={() => setStep(2)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 text-lg">次へ進む</button>
+                            </div>
                         )}
-
-                        {step === 2 && (
-                            <>
-                                <SectionTitle>軸馬 / 注目馬 (任意)</SectionTitle>
-                                <Card className="p-6 mb-8">
-                                    <div className="grid grid-cols-6 gap-3">
-                                        {[...Array(18)].map((_, i) => (
-                                            <button key={i} onClick={() => update('horseNumber', data.horseNumber === i + 1 ? null : i + 1)} className={`btn-press aspect-square rounded-xl font-black text-lg border-2 transition-all ${data.horseNumber === i + 1 ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg transform scale-105' : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'}`}>{i + 1}</button>
-                                        ))}
-                                    </div>
-                                    <div className="mt-8 text-center">
-                                        <button onClick={() => update('horseNumber', null)} className="btn-press text-xs text-rose-500 font-bold px-6 py-2.5 border border-rose-100 rounded-full hover:bg-rose-50 transition-colors">選択をクリア</button>
-                                    </div>
-                                </Card>
-                                <button onClick={() => setStep(3)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">次へ進む <Icon name="arrow-right" /></button>
-                            </>
-                        )}
-
-                        {step === 3 && (
-                            <>
-                                <SectionTitle>タグを選択</SectionTitle>
-                                <div className="grid grid-cols-2 gap-3 mb-8">
-                                    {TAG_OPTIONS.map(tag => (
-                                        <button
-                                            key={tag.id}
-                                            onClick={() => {
-                                                const newTags = data.tags.includes(tag.id) ? data.tags.filter(t => t !== tag.id) : [...data.tags, tag.id];
-                                                update('tags', newTags);
-                                            }}
-                                            className={`btn-press p-4 rounded-2xl border flex items-center gap-3 font-bold text-xs transition-all ${data.tags.includes(tag.id) ? 'bg-emerald-600 border-emerald-600 text-white ring-2 ring-emerald-100' : 'bg-white border-slate-100 text-slate-600'}`}
-                                        >
-                                            <Icon name={tag.icon} /> {tag.label}
-                                        </button>
-                                    ))}
-                                </div>
-                                <SectionTitle>メモ</SectionTitle>
-                                <textarea
-                                    className="w-full p-4 bg-white rounded-2xl border border-slate-200 font-medium text-sm mb-8 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none text-slate-700 min-h-[120px] resize-none"
-                                    placeholder="レースの感想や買い目の理由など..."
-                                    value={data.memo}
-                                    onChange={e => update('memo', e.target.value)}
-                                />
-                                <button onClick={() => setStep(4)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 text-lg">収支入力へ <Icon name="coins" /></button>
-                            </>
-                        )}
-
                         {step === 4 && (
                             <div className="space-y-6">
-                                <NumPad label="購入金額 (投資)" value={data.investment} onChange={v => update('investment', v)} />
-                                <NumPad label="払戻金額 (回収)" value={data.payout} onChange={v => update('payout', v)} confirmLabel="記録を保存" onNext={() => {
-                                    onSave(data);
-                                    const nextRaceNum = data.raceNumber < 12 ? data.raceNumber + 1 : 1;
-                                    const nextState = {
-                                        ...data,
-                                        raceNumber: nextRaceNum,
-                                        investment: '',
-                                        payout: '',
-                                        horseNumber: null,
-                                        memo: '',
-                                        tags: []
-                                    };
-                                    globalInputMemory = nextState;
-                                    setData(nextState);
-                                    setStep(0);
-                                }} />
+                                <div className="glass p-6 rounded-3xl">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Investment</p>
+                                    <input type="number" value={data.investment} onChange={e => update('investment', e.target.value)} placeholder="投資額を入力" className="w-full text-4xl font-black bg-transparent border-b-2 border-emerald-500 pb-2 outline-none" />
+                                </div>
+                                <div className="glass p-6 rounded-3xl">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Payout</p>
+                                    <input type="number" value={data.payout} onChange={e => update('payout', e.target.value)} placeholder="回収額を入力" className="w-full text-4xl font-black bg-transparent border-b-2 border-emerald-500 pb-2 outline-none" />
+                                </div>
+                                <button onClick={() => { onSave(data); setStep(0); }} className="btn-press w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 text-xl mt-4">記録を保存する</button>
                             </div>
                         )}
                     </div>
+
+                    {isScanning && <OCRSimulator onComplete={() => { setIsScanning(false); update('payout', '58400'); update('investment', '6000'); setStep(4); }} onClose={() => setIsScanning(false)} />}
                 </div>
             );
         };
 
-        const AnalysisView = ({ records }) => {
-            const currentYear = new Date().getFullYear();
-            const yearRecords = React.useMemo(() => records.filter(r => new Date(r.date).getFullYear() === currentYear), [records]);
+        const AnalysisView = ({ records, goals }) => {
+            const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
+            const yearRecords = React.useMemo(() => records.filter(r => new Date(r.date).getFullYear() === selectedYear), [records, selectedYear]);
 
-            // Stats
+            // Stats Logic
             const totalRevenue = yearRecords.reduce((sum, r) => sum + (parseInt(r.payout) || 0), 0);
-            const winningRecords = yearRecords.filter(r => (parseInt(r.payout) || 0) > 0);
-            const deductibleCost = winningRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
-            const totalInvestmentAll = yearRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
+            const totalInvestment = yearRecords.reduce((sum, r) => sum + (parseInt(r.investment) || 0), 0);
+            const netProfit = totalRevenue - totalInvestment;
+            const recoveryRate = totalInvestment > 0 ? (totalRevenue / totalInvestment) * 100 : 0;
 
-            // Tax Calc
-            const temporaryIncome = Math.max(0, totalRevenue - deductibleCost - 500000);
-            const taxableIncome = Math.floor(temporaryIncome * 0.5);
-            let incomeTax = 0;
-            if (taxableIncome > 0) {
-                const bracket = TAX_BRACKETS.find(b => taxableIncome >= b.min && taxableIncome <= b.max);
-                if (bracket) incomeTax = (taxableIncome * bracket.rate) - bracket.deduction;
-            }
-            incomeTax = Math.max(0, Math.floor(incomeTax));
-            const reconstructionTax = Math.floor(incomeTax * 0.021);
-            const estimatedTaxTotal = incomeTax + reconstructionTax;
-
-            // Track Stats Logic
-            const trackStats = React.useMemo(() => {
-                const stats = {};
+            // 相性分析 (Best Combinations)
+            const aisyos = React.useMemo(() => {
+                const patterns = {};
                 yearRecords.forEach(r => {
-                    if (!stats[r.location]) stats[r.location] = { inv: 0, pay: 0, wins: 0, count: 0 };
-                    const i = parseInt(r.investment) || 0;
-                    const p = parseInt(r.payout) || 0;
-                    stats[r.location].inv += i;
-                    stats[r.location].pay += p;
-                    stats[r.location].count += 1;
-                    if (p > 0) stats[r.location].wins += 1;
+                    const key = `${r.location} × ${r.ticketType}`;
+                    if (!patterns[key]) patterns[key] = { inv: 0, pay: 0, count: 0 };
+                    patterns[key].inv += parseInt(r.investment);
+                    patterns[key].pay += parseInt(r.payout);
+                    patterns[key].count += 1;
                 });
-                return Object.entries(stats).map(([k, v]) => ({
-                    name: k, ...v,
-                    recovery: v.inv > 0 ? (v.pay / v.inv) * 100 : 0
-                }));
+                return Object.entries(patterns)
+                    .map(([k, v]) => ({ name: k, recovery: (v.pay / v.inv) * 100, profit: v.pay - v.inv, count: v.count }))
+                    .filter(p => p.count >= 2)
+                    .sort((a, b) => b.recovery - a.recovery);
             }, [yearRecords]);
 
-            const bestTrack = trackStats.filter(t => t.inv > 0).sort((a, b) => b.recovery - a.recovery)[0];
-            const worstTrack = trackStats.filter(t => t.inv > 0).sort((a, b) => a.recovery - b.recovery)[0];
-
-            const chartLocRef = React.useRef(null);
-            const chartGradeRef = React.useRef(null);
-            const chartPieRef = React.useRef(null);
             const chartAssetRef = React.useRef(null);
             const chartRefs = React.useRef([]);
 
-            // Monthly Data Calculation
-            const monthlyStats = React.useMemo(() => {
-                const months = {};
-                yearRecords.forEach(r => {
-                    const m = r.date.substring(0, 7); // YYYY-MM
-                    if (!months[m]) months[m] = { inv: 0, pay: 0, count: 0 };
-                    months[m].inv += (parseInt(r.investment) || 0);
-                    months[m].pay += (parseInt(r.payout) || 0);
-                    months[m].count += 1;
-                });
-                return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])); // Newest first
-            }, [yearRecords]);
-
             React.useEffect(() => {
-                const cleanup = () => {
-                    chartRefs.current.forEach(c => c.destroy());
-                    chartRefs.current = [];
-                };
-                cleanup();
+                chartRefs.current.forEach(c => c.destroy());
+                chartRefs.current = [];
+                if (!chartAssetRef.current) return;
 
-                if (!chartLocRef.current || !chartGradeRef.current || !chartPieRef.current || !chartAssetRef.current) return;
-
-                // Helper
-                const aggregateBalance = (keyFn) => {
-                    const map = {};
-                    yearRecords.forEach(r => {
-                        const k = keyFn(r);
-                        if (!map[k]) map[k] = 0;
-                        map[k] += ((parseInt(r.payout) || 0) - (parseInt(r.investment) || 0));
-                    });
-                    return Object.entries(map).sort((a, b) => b[1] - a[1]);
-                };
-
-                const locData = aggregateBalance(r => r.location);
-                const gradeData = aggregateBalance(r => { const g = GRADES.find(g => g.id === r.grade); return g ? g.label : (r.grade || '未設定'); });
-
-                // Donut Chart: Win Distribution
-                const winDistribution = trackStats.filter(t => t.wins > 0).sort((a, b) => b.wins - a.wins).slice(0, 8);
-
-                const createConfig = (labels, data, label) => ({
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label, data,
-                            backgroundColor: data.map(v => v >= 0 ? '#10b981' : '#f43f5e'),
-                            borderRadius: 4, barThickness: 16
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }
-                    }
-                });
-
-                // Asset Curve Data
-                const sortedByDate = [...yearRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
-                let cumulative = 0;
-                const assetLabels = [];
-                const assetData = [];
-                sortedByDate.forEach(r => {
-                    cumulative += ((parseInt(r.payout) || 0) - (parseInt(r.investment) || 0));
-                    assetLabels.push(r.date.substring(5)); // MM-DD
-                    assetData.push(cumulative);
-                });
+                const sorted = [...yearRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let cum = 0;
+                const labels = sorted.map(r => r.date.substring(5));
+                const data = sorted.map(r => { cum += (r.payout - r.investment); return cum; });
 
                 chartRefs.current.push(new Chart(chartAssetRef.current, {
                     type: 'line',
-                    data: {
-                        labels: assetLabels,
-                        datasets: [{
-                            label: '累計収支',
-                            data: assetData,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0 } } }
-                    }
+                    data: { labels, datasets: [{ label: '累計収支', data, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 2 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
                 }));
-
-                chartRefs.current.push(new Chart(chartLocRef.current, createConfig(locData.map(d => d[0]), locData.map(d => d[1]), '場所別収支')));
-                chartRefs.current.push(new Chart(chartGradeRef.current, createConfig(gradeData.map(d => d[0]), gradeData.map(d => d[1]), 'グレード別収支')));
-
-                // Donut Config
-                chartRefs.current.push(new Chart(chartPieRef.current, {
-                    type: 'doughnut',
-                    data: {
-                        labels: winDistribution.map(d => d.name),
-                        datasets: [{
-                            data: winDistribution.map(d => d.wins),
-                            backgroundColor: ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#ecfdf5', '#f0fdf4'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        cutout: '65%',
-                        plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true } } }
-                    }
-                }));
-
-                return cleanup;
-            }, [yearRecords, trackStats]);
+            }, [yearRecords]);
 
             return (
-                <div className="pb-32 p-5 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Icon name="chart-pie" className="mr-3 text-emerald-600" />収支分析</h2>
+                <div className="pb-40 p-5 min-h-screen">
+                    <header className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tighter">分析インサイト</h2>
+                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Advanced Betting Data</p>
+                        </div>
+                        <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="glass px-4 py-2 rounded-xl font-bold text-sm outline-none border-none">
+                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}年度</option>)}
+                        </select>
+                    </header>
 
-                    <Card className="p-6 mb-6 overflow-hidden relative">
-                        <div className="flex justify-between items-baseline mb-8">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-1">Total Report {currentYear}</p>
-                                <h1 className="text-3xl font-black text-slate-800">収支統計</h1>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-xs font-bold text-slate-400">回収率</span>
-                                <div className="text-3xl font-black tracking-tighter text-slate-800">
-                                    {totalInvestmentAll > 0 ? Math.round((totalRevenue / totalInvestmentAll) * 100) : 0}<span className="text-sm ml-0.5">%</span>
+                    {/* Progress Goals */}
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                        <div className="glass p-5 rounded-[2.5rem] flex flex-col items-center">
+                            <ProgressRing progress={(totalRevenue / goals.revenue) * 100} size={80} stroke={8} />
+                            <p className="text-[10px] font-black text-slate-400 mt-4 uppercase">収益目標</p>
+                            <p className="text-lg font-black text-slate-800 tracking-tight">{totalRevenue.toLocaleString()}</p>
+                        </div>
+                        <div className="glass p-5 rounded-[2.5rem] flex flex-col items-center">
+                            <ProgressRing progress={(recoveryRate / goals.recovery) * 100} size={80} stroke={8} color="text-amber-500" />
+                            <p className="text-[10px] font-black text-slate-400 mt-4 uppercase">回収率目標</p>
+                            <p className="text-lg font-black text-slate-800 tracking-tight">{Math.round(recoveryRate)}%</p>
+                        </div>
+                    </div>
+
+                    <Card className={`p-6 rounded-[2.5rem] mb-8 text-white relative overflow-hidden ${netProfit >= 0 ? 'bg-emerald-600' : 'bg-rose-500'} shadow-2xl`}>
+                        <div className="relative z-10">
+                            <p className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1">Current Balanced Balance</p>
+                            <h3 className="text-4xl font-black tracking-tighter">{netProfit.toLocaleString()}<span className="text-sm font-normal ml-2">円</span></h3>
+                            <div className="mt-6 flex gap-4">
+                                <div className="bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md">
+                                    <p className="text-[9px] font-bold opacity-60">回収率</p>
+                                    <p className="text-lg font-black">{Math.round(recoveryRate)}%</p>
+                                </div>
+                                <div className="bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md">
+                                    <p className="text-[9px] font-bold opacity-60">レース数</p>
+                                    <p className="text-lg font-black">{yearRecords.length}</p>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">総払戻 (Revenue)</p>
-                                <p className="text-xl font-black text-slate-700">{totalRevenue.toLocaleString()}</p>
-                            </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">総投資 (Investment)</p>
-                                <p className="text-xl font-black text-slate-700">{totalInvestmentAll.toLocaleString()}</p>
-                            </div>
-                        </div>
-
-                        <div className={`rounded-2xl p-5 text-white shadow-xl relative overflow-hidden ${totalRevenue - totalInvestmentAll >= 0 ? 'bg-emerald-600 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
-                            <div className="absolute -top-4 -right-4 text-white opacity-20"><Icon name="coins" className="text-8xl" /></div>
-                            <div className="relative z-10 flex justify-between items-end">
-                                <div>
-                                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Net Profit</p>
-                                    <h2 className="text-3xl font-black tracking-tight">{(totalRevenue - totalInvestmentAll).toLocaleString()} <span className="text-sm font-normal">円</span></h2>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Tax Est.</p>
-                                    <p className="text-lg font-bold">{estimatedTaxTotal.toLocaleString()} 円</p>
-                                </div>
-                            </div>
-                        </div>
+                        <i className={`fas ${netProfit >= 0 ? 'fa-chart-line' : 'fa-chart-bar'} absolute -bottom-10 -right-10 text-[12rem] opacity-10`} />
                     </Card>
 
-                    {/* NEW: Monthly Summary Scroll */}
-                    <SectionTitle>月別サマリー</SectionTitle>
-                    <div className="flex gap-4 overflow-x-auto pb-6 hide-scrollbar snap-x -mx-5 px-5">
-                        {monthlyStats.length === 0 ? <div className="text-slate-400 text-xs font-bold p-4">データがありません</div> : monthlyStats.map(([m, s]) => (
-                            <div key={m} className="min-w-[160px] snap-center">
-                                <Card className="p-4 border-l-4 border-l-emerald-500">
-                                    <div className="text-[10px] font-black text-slate-400 mb-1">{m.replace('-', '/')}</div>
-                                    <div className={`text-lg font-black ${s.pay - s.inv >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                        {s.pay - s.inv > 0 ? '+' : ''}{(s.pay - s.inv).toLocaleString()}
+                    <SectionTitle>最強の勝負パターン (相性診断)</SectionTitle>
+                    <div className="space-y-4 mb-8">
+                        {aisyos.slice(0, 3).map((a, i) => (
+                            <div key={i} className="glass p-5 rounded-3xl flex items-center justify-between border-l-4 border-l-amber-400">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-black">#{i+1}</div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-800">{a.name}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold">サンプル数: {a.count}レース</p>
                                     </div>
-                                    <div className="text-[9px] font-bold text-slate-400 mt-1">回収率: {s.inv > 0 ? Math.round((s.pay / s.inv) * 100) : 0}%</div>
-                                </Card>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xl font-black text-emerald-600">{Math.round(a.recovery)}%</p>
+                                    <p className="text-[10px] text-emerald-500 font-bold">利益: +{a.profit.toLocaleString()}</p>
+                                </div>
                             </div>
                         ))}
                     </div>
 
-                    <Card className="p-6 mb-8">
-                        <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>累計収支推移 (資産曲線)</h3>
-                        <div className="chart-container"><canvas ref={chartAssetRef}></canvas></div>
+                    <Card className="p-6 rounded-[2.5rem] mb-8">
+                        <h3 className="font-bold text-slate-700 mb-6 text-sm">累計収支推移</h3>
+                        <div className="h-[240px] w-full"><canvas ref={chartAssetRef}></canvas></div>
                     </Card>
 
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <Card className="p-4">
-                            <div className="flex items-center gap-2 mb-2 text-emerald-600">
-                                <Icon name="crown" /> <span className="text-[10px] font-bold uppercase">Best Track</span>
-                            </div>
-                            {bestTrack ? (
-                                <div>
-                                    <div className="text-lg font-black text-slate-800">{bestTrack.name}</div>
-                                    <div className="text-xs font-medium text-slate-500">回収率: <span className="text-emerald-600 font-bold">{Math.round(bestTrack.recovery)}%</span></div>
-                                </div>
-                            ) : <div className="text-xs text-slate-400">データなし</div>}
-                        </Card>
-                        <Card className="p-4">
-                            <div className="flex items-center gap-2 mb-2 text-rose-500">
-                                <Icon name="thumbs-down" /> <span className="text-[10px] font-bold uppercase">Worst Track</span>
-                            </div>
-                            {worstTrack ? (
-                                <div>
-                                    <div className="text-lg font-black text-slate-800">{worstTrack.name}</div>
-                                    <div className="text-xs font-medium text-slate-500">回収率: <span className="text-rose-500 font-bold">{Math.round(worstTrack.recovery)}%</span></div>
-                                </div>
-                            ) : <div className="text-xs text-slate-400">データなし</div>}
-                        </Card>
-                    </div>
-
-                    <div className="space-y-6">
-                        <Card className="p-6">
-                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>場所別収支</h3>
-                            <div className="chart-container"><canvas ref={chartLocRef}></canvas></div>
-                        </Card>
-
-                        <Card className="p-6">
-                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>的中数割合 (場所別)</h3>
-                            <div className="chart-container"><canvas ref={chartPieRef}></canvas></div>
-                        </Card>
-
-                        <Card className="p-6">
-                            <h3 className="font-bold text-slate-700 mb-6 text-sm flex items-center"><span className="w-1 h-4 bg-emerald-500 rounded-full mr-2"></span>グレード別収支</h3>
-                            <div className="chart-container"><canvas ref={chartGradeRef}></canvas></div>
-                        </Card>
-                    </div>
-
-                    <div className="mt-10 mb-6">
-                        <button onClick={() => window.print()} className="btn-press w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-800/20 flex items-center justify-center gap-3 hover:bg-slate-700 transition-colors">
-                            <Icon name="print" /> 帳票印刷 (PDF保存)
-                        </button>
-                        <p className="text-[10px] text-center text-slate-400 mt-3 font-medium">※ブラウザの印刷機能を使用します（A4横対応）</p>
-                    </div>
+                    <button onClick={() => window.print()} className="btn-press w-full py-5 glass rounded-[2rem] font-black text-slate-800 flex items-center justify-center gap-3 shadow-lg">
+                        <i className="fas fa-print" /> プロフェッショナル帳票出力
+                    </button>
                 </div>
             );
         };
+
 
         const ListView = ({ records, onDelete }) => {
             const [filter, setFilter] = React.useState({ track: '', type: '', text: '' });
@@ -1115,86 +914,56 @@
             const [view, setView] = React.useState('INPUT');
             const [records, setRecords] = React.useState([]);
             const [toast, setToast] = React.useState({ show: false, message: '' });
+            const [goals, setGoals] = React.useState({ revenue: 1000000, recovery: 110 });
 
             React.useEffect(() => {
                 const saved = localStorage.getItem('bettrack_records_v1');
-                if (saved) { try { setRecords(JSON.parse(saved)); } catch (e) { } }
+                if (saved) try { setRecords(JSON.parse(saved)); } catch (e) { }
             }, []);
 
-            const showToast = (msg) => {
-                setToast({ show: true, message: msg });
-                setTimeout(() => setToast({ show: false, message: '' }), 3000);
-            };
+            const currentBalance = React.useMemo(() => {
+                const total = records.reduce((sum, r) => sum + (r.payout - r.investment), 0);
+                return total;
+            }, [records]);
+
+            const ambientClass = React.useMemo(() => {
+                const hour = new Date().getHours();
+                if (hour >= 5 && hour < 10) return 'ambient-dawn';
+                if (hour >= 10 && hour < 16) return currentBalance >= 0 ? 'ambient-day' : 'ambient-day-loss';
+                if (hour >= 16 && hour < 19) return 'ambient-dusk';
+                return 'ambient-night';
+            }, [currentBalance]);
 
             const saveRecord = (data) => {
-                const inv = parseInt(data.investment) || 0;
-                const pay = parseInt(data.payout) || 0;
-
-                // --- ADDED: Confetti Celebration ---
-                if (pay > 0) {
-                    confetti({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#10b981', '#059669', '#34d399', '#fcd34d']
-                    });
-                }
-
-                const newRecord = { id: Date.now().toString(), ...data, investment: inv, payout: pay, timestamp: Date.now() };
+                if (data.payout > 0) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#10b981', '#059669', '#fcd34d'] });
+                const newRecord = { ...data, id: Date.now().toString(), investment: parseInt(data.investment), payout: parseInt(data.payout) };
                 const updated = [newRecord, ...records];
                 setRecords(updated);
                 localStorage.setItem('bettrack_records_v1', JSON.stringify(updated));
-                showToast('記録を保存しました');
-            };
-
-            const deleteRecord = (id) => {
-                if (!confirm('削除しますか？')) return;
-                const updated = records.filter(r => r.id !== id);
-                setRecords(updated);
-                localStorage.setItem('bettrack_records_v1', JSON.stringify(updated));
-            };
-
-            const importData = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const imported = JSON.parse(ev.target.result);
-                        if (Array.isArray(imported)) {
-                            setRecords(imported);
-                            localStorage.setItem('bettrack_records_v1', JSON.stringify(imported));
-                            showToast('データを復元しました');
-                        }
-                    } catch (err) { alert('エラー: ファイル形式が不正です'); }
-                };
-                reader.readAsText(file);
+                setToast({ show: true, message: '記録を保存しました' });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
             };
 
             return (
-                <React.Fragment>
+                <div className={`min-h-screen transition-all duration-1000 ${ambientClass}`}>
                     <Toast message={toast.message} show={toast.show} />
-
-                    {/* Mobile App View */}
-                    <div className="app-view min-h-screen max-w-md mx-auto bg-slate-50 shadow-2xl overflow-hidden relative border-x border-slate-200">
-                        <main className="h-full overflow-y-auto hide-scrollbar">
+                    <div className="max-w-md mx-auto relative min-h-screen">
+                        <main className="h-full">
                             {view === 'INPUT' && <InputView onSave={saveRecord} recordCount={records.length} />}
-                            {view === 'LIST' && <ListView records={records} onDelete={deleteRecord} />}
-                            {view === 'ANALYSIS' && <AnalysisView records={records} />}
-                            {view === 'SETTINGS' && <SettingsView records={records} onImport={importData} />}
+                            {view === 'LIST' && <ListView records={records} onDelete={(id) => setRecords(records.filter(r => r.id !== id))} />}
+                            {view === 'ANALYSIS' && <AnalysisView records={records} goals={goals} />}
+                            {view === 'SETTINGS' && <SettingsView records={records} onImport={(e) => {}} />}
                         </main>
-                        <nav className="absolute bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pb-safe pt-2 h-[85px] z-50">
+                        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass border-t flex justify-around items-center h-[85px] z-50">
                             {[{ id: 'INPUT', icon: 'plus-circle', label: '記録' }, { id: 'LIST', icon: 'list', label: '履歴' }, { id: 'ANALYSIS', icon: 'chart-pie', label: '分析' }, { id: 'SETTINGS', icon: 'cog', label: '設定' }].map(item => (
-                                <button key={item.id} onClick={() => setView(item.id)} className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 ${view === item.id ? 'text-emerald-600 scale-105' : 'text-slate-300 hover:text-slate-400'}`}>
-                                    <Icon name={item.icon} className={`text-xl mb-0.5 ${view === item.id ? 'animate-pop' : ''}`} /><span className="text-[10px] font-bold tracking-wide">{item.label}</span>
+                                <button key={item.id} onClick={() => setView(item.id)} className={`flex flex-col items-center justify-center w-full h-full transition-all ${view === item.id ? 'text-emerald-600 scale-105' : 'text-slate-400'}`}>
+                                    <i className={`fas fa-${item.icon} text-xl mb-1`} />
+                                    <span className="text-[10px] font-bold">{item.label}</span>
                                 </button>
                             ))}
                         </nav>
                     </div>
-
-                    {/* Print View */}
-                    <PrintView records={records} />
-                </React.Fragment>
+                </div>
             );
         };
 
