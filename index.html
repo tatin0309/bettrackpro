@@ -522,15 +522,61 @@
                         {/* step 1~4 は同様に glass / premium 調整 */}
                         {step === 1 && (
                             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <SectionTitle>レース番号</SectionTitle>
-                                <div className="grid grid-cols-6 gap-2 mb-8">
+                                <SectionTitle>レース詳細</SectionTitle>
+                                <div className="grid grid-cols-6 gap-2 mb-4">
                                     {[...Array(12)].map((_, i) => <Tile key={i} label={`${i+1}R`} active={data.raceNumber === i+1} onClick={() => update('raceNumber', i+1)} />)}
                                 </div>
+
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                     {SURFACES.map(s => <Tile key={s.id} label={s.label} active={data.surface === s.id} onClick={() => update('surface', s.id)} colorClass={s.color} />)}
+                                </div>
+         
+                                 <div className="grid grid-cols-4 gap-2 mb-4">
+                                     {DISTANCES.map(d => <Tile key={d.id} label={d.label} sub={d.sub} active={data.distance === d.id} onClick={() => update('distance', d.id)} />)}
+                                 </div>
+         
+                                 <div className="grid grid-cols-4 gap-2 mb-4">
+                                     {CONDITIONS.map(c => <Tile key={c} label={c} active={data.condition === c} onClick={() => update('condition', c)} />)}
+                                 </div>
+         
+                                <SectionTitle>クラス・グレード</SectionTitle>
+                                 <div className="grid grid-cols-5 gap-2 mb-6">
+                                      {GRADES.map(g => <Tile key={g.id} label={g.label} active={data.grade === g.id} onClick={() => update('grade', g.id)}  colorClass={g.color} />)}
+                                 </div>
+
                                 <SectionTitle>券種</SectionTitle>
                                 <div className="grid grid-cols-3 gap-2.5 mb-8">
                                     {TICKET_TYPES.map(t => <Tile key={t.id} label={t.label} active={data.ticketType === t.label} onClick={() => update('ticketType', t.label)} />)}
                                 </div>
                                 <button onClick={() => setStep(2)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 text-lg">次へ進む</button>
+                            </div>
+                        )}
+                        {step === 2 && (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <SectionTitle>軸馬選択</SectionTitle>
+                                <div className="grid grid-cols-6 gap-2 mb-8">
+                                    {[...Array(18)].map((_, i) => <Tile key={i} label={i + 1} active={data.horseNumber === i + 1} onClick={() => update('horseNumber', i + 1)} />)}
+                                </div>
+                                <button onClick={() => setStep(3)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 text-lg">次へ進む</button>
+                            </div>
+                        )}
+                        {step === 3 && (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <SectionTitle>メモ</SectionTitle>
+                                <textarea value={data.memo} onChange={e => update('memo', e.target.value)} placeholder="レースの感想や特記事項..." className="w-full p-4 glass rounded-2xl border min-h-[120px] font-medium text-slate-600 focus:border-emerald-500 outline-none mb-6" />
+                                
+                                <SectionTitle>タグ</SectionTitle>
+                                <div className="flex flex-wrap gap-2 mb-8">
+                                    {TAG_OPTIONS.map(t => (
+                                        <button key={t.id} onClick={() => {
+                                            const newTags = data.tags.includes(t.id) ? data.tags.filter(id => id !== t.id) : [...data.tags, t.id];
+                                            update('tags', newTags);
+                                        }} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${data.tags.includes(t.id) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+                                            <Icon name={t.icon} className="mr-2" />{t.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => setStep(4)} className="btn-press w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl shadow-emerald-500/20 text-lg">次へ進む</button>
                             </div>
                         )}
                         {step === 4 && (
